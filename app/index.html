@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
-    <!-- Splash screen with YouTube icon and font -->
+    <!-- Splash screen -->
     <div id="splash-screen" class="splash-screen">
         <div class="splash-content">
             <div class="splash-logo">
@@ -20,14 +20,25 @@
     </div>
 
     <div id="app">
-        <!-- Top bar with logo and actions (no menu button) -->
+        <!-- Top bar with search and YouTube icon -->
         <header class="top-bar">
             <div class="logo">📺 SMART TV</div>
             <div class="top-actions">
-                <span class="search-icon" data-focusable="true">🔍</span>
+                <span class="search-icon" id="search-button" data-focusable="true">🔍</span>
+                <span class="youtube-icon-small" data-focusable="true">
+                    <span class="youtube-red"></span>
+                </span>
                 <span class="profile-icon" data-focusable="true">👤</span>
             </div>
         </header>
+
+        <!-- Search overlay (hidden by default) -->
+        <div id="search-overlay" class="search-overlay hidden">
+            <div class="search-container">
+                <input type="text" id="search-input" class="search-input" placeholder="Search channels..." data-focusable="true">
+                <button class="search-close" data-action="back" data-focusable="true">✖</button>
+            </div>
+        </div>
 
         <!-- Main content with category rows -->
         <main class="content" id="content">
