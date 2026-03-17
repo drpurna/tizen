@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMART TV</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+    <!-- Splash screen -->
+    <div id="splash-screen" class="splash-screen">
+        <div class="splash-content">
+            <div class="splash-logo">📺 SMART TV</div>
+            <div class="splash-tagline">Your favorite channels, reimagined</div>
+        </div>
+    </div>
+
+    <div id="app">
+        <header class="top-bar">
+            <button class="menu-btn" data-focusable="true">☰</button>
+            <div class="logo">📺 SMART TV</div>
+            <div class="top-actions">
+                <span class="search-icon" data-focusable="true">🔍</span>
+                <span class="profile-icon" data-focusable="true">👤</span>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <nav class="sidebar" id="sidebar">
+                <ul>
+                    <li data-category="all" class="sidebar-item active" data-focusable="true">🏠 Home</li>
+                    <li data-category="news" class="sidebar-item" data-focusable="true">📰 News</li>
+                    <li data-category="sports" class="sidebar-item" data-focusable="true">⚽ Sports</li>
+                    <li data-category="movies" class="sidebar-item" data-focusable="true">🎬 Movies</li>
+                    <li data-category="entertainment" class="sidebar-item" data-focusable="true">🎉 Entertainment</li>
+                </ul>
+            </nav>
+
+            <main class="content">
+                <div class="channel-grid" id="channel-grid"></div>
+            </main>
+        </div>
+
+        <div id="player-container" class="player-container hidden">
+            <video id="video-player" class="video-player" autoplay controls></video>
+            <button class="close-player" data-action="back" data-focusable="true">✖ Close</button>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
