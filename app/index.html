@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SMART TV</title>
+    <title>$mart TV</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
@@ -13,26 +13,25 @@
         <div class="splash-content">
             <div class="splash-logo">
                 <div class="youtube-icon"></div>
-                SMART TV
+                $mart TV
             </div>
             <div class="splash-tagline">Your favorite channels, reimagined</div>
         </div>
     </div>
 
     <div id="app">
-        <!-- Top bar with search and YouTube icon -->
+        <!-- Top bar with search and YouTube icon (no profile) -->
         <header class="top-bar">
-            <div class="logo">📺 SMART TV</div>
+            <div class="logo">📺 $mart TV</div>
             <div class="top-actions">
                 <span class="search-icon" id="search-button" data-focusable="true">🔍</span>
                 <span class="youtube-icon-small" data-focusable="true">
                     <span class="youtube-red"></span>
                 </span>
-                <span class="profile-icon" data-focusable="true">👤</span>
             </div>
         </header>
 
-        <!-- Search overlay (hidden by default) -->
+        <!-- Search overlay -->
         <div id="search-overlay" class="search-overlay hidden">
             <div class="search-container">
                 <input type="text" id="search-input" class="search-input" placeholder="Search channels..." data-focusable="true">
@@ -42,7 +41,7 @@
 
         <!-- Main content with category rows -->
         <main class="content" id="content">
-            <!-- Rows will be injected by JavaScript -->
+            <!-- Rows injected by JavaScript -->
         </main>
 
         <!-- Fullscreen video player -->
