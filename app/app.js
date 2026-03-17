@@ -1,14 +1,11 @@
 class IPTVApp {
     constructor() {
         this.channels = [];
-        this.currentCategory = 'all';
         this.currentChannel = null;
         this.hls = null;
         this.videoPlayer = document.getElementById('video-player');
         this.playerContainer = document.getElementById('player-container');
         this.content = document.getElementById('content');
-        this.sidePanel = document.getElementById('side-panel');
-        this.menuToggle = document.getElementById('menu-toggle');
         this.splashScreen = document.getElementById('splash-screen');
         this.startTime = Date.now();
 
@@ -17,7 +14,6 @@ class IPTVApp {
 
     async init() {
         await this.loadChannels();
-        this.renderSidePanel();
         this.renderRows();
         this.setupEventListeners();
         this.hideSplash();
@@ -88,42 +84,20 @@ class IPTVApp {
         ];
     }
 
-    renderSidePanel() {
-        const items = this.sidePanel.querySelectorAll('.panel-item[data-category]');
-        items.forEach(item => {
-            item.addEventListener('click', () => {
-                const category = item.dataset.category;
-                this.filterByCategory(category);
-                this.closePanel();
-            });
-        });
-    }
-
-    filterByCategory(category) {
-        this.currentCategory = category;
-        // Update active state in panel
-        this.sidePanel.querySelectorAll('.panel-item').forEach(item => {
-            item.classList.toggle('active', item.dataset.category === category);
-        });
-        // Scroll to the selected category row
-        const targetRow = document.getElementById(`row-${category}`);
-        if (targetRow) {
-            targetRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }
-
     renderRows() {
         // Group channels by category
         const categories = {
-            all: this.channels,
             news: this.channels.filter(c => c.category === 'news'),
             sports: this.channels.filter(c => c.category === 'sports'),
             movies: this.channels.filter(c => c.category === 'movies'),
             entertainment: this.channels.filter(c => c.category === 'entertainment')
         };
 
+        // Also include "Recommended" (mix of all) – you can customize
+        categories.recommended = this.channels.slice(0, 10); // first 10 as sample
+
         const categoryNames = {
-            all: 'Recommended',
+            recommended: 'Recommended',
             news: 'News',
             sports: 'Sports',
             movies: 'Movies',
@@ -136,7 +110,7 @@ class IPTVApp {
             html += `
                 <div class="category-row" id="row-${cat}">
                     <div class="row-header">
-                        <h2 class="row-title">${categoryNames[cat]}</h2>
+                        <h2 class="row-title">${categoryNames[cat] || cat}</h2>
                         <span class="row-link" data-focusable="true">More ›</span>
                     </div>
                     <div class="channel-strip" id="strip-${cat}">
@@ -161,10 +135,10 @@ class IPTVApp {
             el.addEventListener('tv-enter', () => this.playChannel(el.dataset.channelId));
         });
 
-        // Attach listeners to "More" links (optional, could show full category)
+        // "More" links could scroll to that row or expand – for now, just keep focusable
         document.querySelectorAll('.row-link').forEach(el => {
             el.addEventListener('click', (e) => {
-                // For now, just scroll to that row's header (already visible)
+                // Optional: could navigate to a full category view
                 e.stopPropagation();
             });
         });
@@ -211,20 +185,7 @@ class IPTVApp {
     }
 
     setupEventListeners() {
-        // Menu toggle
-        this.menuToggle.addEventListener('click', () => this.togglePanel());
-        this.menuToggle.addEventListener('tv-enter', () => this.togglePanel());
-
-        // Close panel when clicking outside (if open)
-        document.addEventListener('click', (e) => {
-            if (this.sidePanel.classList.contains('open') &&
-                !this.sidePanel.contains(e.target) &&
-                !this.menuToggle.contains(e.target)) {
-                this.closePanel();
-            }
-        });
-
-        // Close player
+        // Close player with back button
         document.querySelector('.close-player').addEventListener('click', () => this.hidePlayer());
         document.querySelector('.close-player').addEventListener('tv-enter', () => this.hidePlayer());
 
@@ -232,23 +193,9 @@ class IPTVApp {
         window.addEventListener('tv-back', () => {
             if (!this.playerContainer.classList.contains('hidden')) {
                 this.hidePlayer();
-            } else if (this.sidePanel.classList.contains('open')) {
-                this.closePanel();
             }
+            // If no player, maybe exit app – handled by system
         });
-    }
-
-    togglePanel() {
-        this.sidePanel.classList.toggle('open');
-        if (this.sidePanel.classList.contains('open')) {
-            // Focus first panel item for remote navigation
-            const firstItem = this.sidePanel.querySelector('.panel-item');
-            if (firstItem) firstItem.focus();
-        }
-    }
-
-    closePanel() {
-        this.sidePanel.classList.remove('open');
     }
 }
 
