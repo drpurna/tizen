@@ -5,6 +5,7 @@ const channelListEl = document.getElementById('channelList');
 const nowPlayingEl = document.getElementById('nowPlaying');
 const statusTextEl = document.getElementById('statusText');
 const video = document.getElementById('video');
+const categoryBar = document.getElementById('categoryBar');
 
 let channels = [];
 let filtered = [];
@@ -19,7 +20,6 @@ function setStatus(text) {
   statusTextEl.textContent = text;
 }
 
-// ========== NEW: Parse M3U with logo extraction ==========
 function parseM3U(text) {
   const lines = text.split(/\r?\n/);
   const out = [];
@@ -32,7 +32,7 @@ function parseM3U(text) {
     if (line.startsWith('#EXTINF')) {
       const namePart = line.includes(',') ? line.split(',').slice(1).join(',').trim() : 'Unknown';
       const groupMatch = line.match(/group-title="([^"]+)"/i);
-      const logoMatch = line.match(/tvg-logo="([^"]+)"/i);   // <-- extract logo
+      const logoMatch = line.match(/tvg-logo="([^"]+)"/i);
       currentMeta = {
         name: namePart || 'Unknown',
         group: groupMatch ? groupMatch[1] : 'Other',
@@ -55,18 +55,9 @@ function parseM3U(text) {
   return out;
 }
 
-// ========== NEW: Category bar creation ==========
-function createCategoryBar(allChannels) {
+// Populate the existing category bar (now in HTML)
+function updateCategoryBar(allChannels) {
   const groups = [...new Set(allChannels.map(ch => ch.group))].sort();
-
-  let categoryBar = document.getElementById('categoryBar');
-  if (!categoryBar) {
-    categoryBar = document.createElement('div');
-    categoryBar.id = 'categoryBar';
-    categoryBar.className = 'category-bar';
-    // Insert after search input
-    searchInput.parentNode.insertBefore(categoryBar, searchInput.nextSibling);
-  }
   categoryBar.innerHTML = '';
 
   // "All" button
@@ -80,7 +71,6 @@ function createCategoryBar(allChannels) {
   });
   categoryBar.appendChild(allBtn);
 
-  // Category buttons
   groups.forEach(group => {
     const btn = document.createElement('button');
     btn.textContent = group;
@@ -105,7 +95,6 @@ function highlightCategory(activeBtn) {
   activeBtn.classList.add('active');
 }
 
-// ========== Updated renderList with icons ==========
 function renderList() {
   channelListEl.innerHTML = '';
   if (!filtered.length) {
@@ -130,16 +119,34 @@ function renderList() {
       </div>
     `;
 
-    li.onclick = () => {
+    // Single click: select and play
+    li.addEventListener('click', () => {
       selectedIndex = idx;
       renderList();
       playSelected();
-    };
+    });
+
+    // Double-click: toggle fullscreen (for mouse users)
+    li.addEventListener('dblclick', () => {
+      toggleFullscreen();
+    });
+
     channelListEl.appendChild(li);
   });
 
   const active = channelListEl.querySelector('li.active');
   if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+// Fullscreen toggle
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    video.requestFullscreen().catch(err => {
+      console.warn('Fullscreen failed:', err);
+    });
+  } else {
+    document.exitFullscreen();
+  }
 }
 
 function applySearch() {
@@ -205,7 +212,7 @@ async function loadPlaylist() {
     filtered = [...channels];
     selectedIndex = 0;
     renderList();
-    createCategoryBar(channels);   // <-- new
+    updateCategoryBar(channels);
 
     localStorage.setItem('misoIptv:lastPlaylist', usedUrl);
     setStatus(`Loaded ${channels.length} channels`);
@@ -309,13 +316,21 @@ window.addEventListener('keydown', (e) => {
   const key = e.key;
   const code = e.keyCode;
 
+  // Navigation
   if (key === 'ArrowUp') {
     if (focusArea === 'list') moveSelection(-1);
+    else if (focusArea === 'player') {
+      // Optionally move focus back to list
+      focusArea = 'list';
+    }
     e.preventDefault();
     return;
   }
   if (key === 'ArrowDown') {
     if (focusArea === 'list') moveSelection(1);
+    else if (focusArea === 'player') {
+      focusArea = 'list';
+    }
     e.preventDefault();
     return;
   }
@@ -330,12 +345,17 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (key === 'Enter') {
-    if (focusArea === 'list') playSelected();
+    if (focusArea === 'list') {
+      playSelected();
+    } else if (focusArea === 'player') {
+      // Toggle fullscreen if video is focused
+      toggleFullscreen();
+    }
     e.preventDefault();
     return;
   }
 
-  // Media keys
+  // Media keys (same as before)
   if (key === 'MediaPlayPause' || code === 10252) {
     if (video.paused) video.play().catch(() => {});
     else video.pause();
