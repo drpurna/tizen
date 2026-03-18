@@ -3,27 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>$mart TV</title>
+    <title>Smart TV</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
-    <!-- Splash screen -->
+    <!-- Splash screen – no tagline, just logo and text -->
     <div id="splash-screen" class="splash-screen">
         <div class="splash-content">
             <div class="splash-logo">
                 <div class="youtube-icon"></div>
-                $mart TV
+                Smart TV
             </div>
-            <div class="splash-tagline">Your favorite channels, reimagined</div>
         </div>
     </div>
 
     <div id="app">
-        <!-- Top bar with search and YouTube icon -->
+        <!-- Top bar with menu button (now used to maybe open future settings, but no side panel) -->
         <header class="top-bar">
-            <button class="menu-btn" id="menu-toggle" data-focusable="true">☰</button>
-            <div class="logo">📺 $mart TV</div>
+            <div class="logo">📺 Smart TV</div>
             <div class="top-actions">
                 <span class="search-icon" id="search-button" data-focusable="true">🔍</span>
                 <span class="youtube-icon-small" data-focusable="true">
@@ -31,41 +29,6 @@
                 </span>
             </div>
         </header>
-
-        <!-- Side panel (hidden by default) -->
-        <nav class="side-panel" id="side-panel">
-            <div class="panel-header">
-                <div class="panel-logo">📺 $mart TV</div>
-            </div>
-            <ul class="panel-menu">
-                <li data-category="all" class="panel-item active" data-focusable="true">
-                    <span class="icon">🏠</span>
-                    <span class="label">Home</span>
-                </li>
-                <li data-category="news" class="panel-item" data-focusable="true">
-                    <span class="icon">📰</span>
-                    <span class="label">News</span>
-                </li>
-                <li data-category="sports" class="panel-item" data-focusable="true">
-                    <span class="icon">⚽</span>
-                    <span class="label">Sports</span>
-                </li>
-                <li data-category="movies" class="panel-item" data-focusable="true">
-                    <span class="icon">🎬</span>
-                    <span class="label">Movies</span>
-                </li>
-                <li data-category="entertainment" class="panel-item" data-focusable="true">
-                    <span class="icon">🎉</span>
-                    <span class="label">Entertainment</span>
-                </li>
-            </ul>
-            <div class="panel-footer">
-                <div class="panel-item" data-focusable="true">
-                    <span class="icon">⚙️</span>
-                    <span class="label">Settings</span>
-                </div>
-            </div>
-        </nav>
 
         <!-- Search overlay -->
         <div id="search-overlay" class="search-overlay hidden">
