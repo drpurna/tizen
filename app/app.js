@@ -1,5 +1,5 @@
 /* =========================
-   IPTV ENGINE v4 FINAL
+   IPTV ENGINE v5 (STABLE UI + PLAYER)
 ========================= */
 
 const App = (() => {
@@ -10,21 +10,22 @@ const App = (() => {
 const S = {
   channels: [],
   rows: [],
-  groups: [],
   flat: [],
 
   focusRow: 0,
   focusCol: 0,
   currentIndex: 0,
 
-  player: null,
+  rowScroll: {},
 
-  visibleStart: 0,
-  VISIBLE_ROWS: 6,
+  player: null,
+  isFullscreen: false,
 
   dom: {
     rows: document.getElementById("rows"),
-    overlay: document.getElementById("overlay")
+    overlay: document.getElementById("overlay"),
+    player: document.getElementById("player"),
+    ui: document.getElementById("ui")
   }
 };
 
@@ -35,7 +36,6 @@ const CONFIG = {
   PLAYLIST: localStorage.getItem("custom_playlist") 
     || "https://iptv-org.github.io/iptv/languages/tel.m3u",
 
-  CACHE_KEY: "iptv_cache_v2",
   BUFFER: "300"
 };
 
@@ -46,20 +46,13 @@ async function init() {
 
   try { S.player = webapis.avplay; } catch(e){}
 
-  let text = localStorage.getItem(CONFIG.CACHE_KEY);
-
-  if (!text) {
-    text = await fetch(CONFIG.PLAYLIST).then(r=>r.text());
-    localStorage.setItem(CONFIG.CACHE_KEY, text);
-  }
+  const text = await fetch(CONFIG.PLAYLIST).then(r=>r.text());
 
   S.channels = parse(text);
   build();
+  render();
 
-  renderWindow();
   setFocus();
-
-  bindHeader();
 }
 
 /* =========================
@@ -100,9 +93,9 @@ function build() {
     map[ch.group].push(ch);
   });
 
-  S.groups = Object.keys(map).sort((a,b)=>a.localeCompare(b));
+  const groups = Object.keys(map).sort((a,b)=>a.localeCompare(b));
 
-  S.rows = S.groups.map(g => ({
+  S.rows = groups.map(g => ({
     title: g,
     items: map[g]
   }));
@@ -111,18 +104,13 @@ function build() {
 }
 
 /* =========================
-   VIRTUAL RENDER
+   RENDER
 ========================= */
-function renderWindow() {
-
-  const start = S.visibleStart;
-  const end = Math.min(start + S.VISIBLE_ROWS, S.rows.length);
+function render() {
 
   const frag = document.createDocumentFragment();
 
-  for (let r = start; r < end; r++) {
-
-    const row = S.rows[r];
+  S.rows.forEach((row, r) => {
 
     const rowEl = div("row");
 
@@ -139,7 +127,6 @@ function renderWindow() {
       if (ch.logo) {
         const img = new Image();
         img.src = ch.logo;
-        img.loading = "lazy";
         card.appendChild(img);
       } else {
         card.textContent = ch.name;
@@ -151,46 +138,59 @@ function renderWindow() {
     rowEl.appendChild(title);
     rowEl.appendChild(items);
     frag.appendChild(rowEl);
-  }
+  });
 
   S.dom.rows.innerHTML = "";
   S.dom.rows.appendChild(frag);
 }
 
 /* =========================
-   FOCUS + HORIZONTAL SCROLL
+   FOCUS + SCROLL FIX
 ========================= */
 function setFocus() {
 
   document.querySelectorAll(".card.active")
     .forEach(e=>e.classList.remove("active"));
 
-  const vr = S.focusRow - S.visibleStart;
-
-  const rowEl = S.dom.rows.children[vr];
+  const rowEl = S.dom.rows.children[S.focusRow];
   if (!rowEl) return;
 
   const items = rowEl.children[1];
   const el = items.children[S.focusCol];
 
-  if (el) {
-    el.classList.add("active");
-  }
+  if (el) el.classList.add("active");
 
   scrollRow(items);
 }
 
 /* =========================
-   ROW SCROLL
+   TRUE HORIZONTAL SCROLL
 ========================= */
 function scrollRow(items) {
 
-  const offset = S.focusCol * 280;
+  if (!S.rowScroll[S.focusRow])
+    S.rowScroll[S.focusRow] = 0;
+
+  let scroll = S.rowScroll[S.focusRow];
+
+  const visibleCount = 6;
+
+  if (S.focusCol >= scroll + visibleCount) {
+    scroll = S.focusCol - visibleCount + 1;
+  }
+
+  if (S.focusCol < scroll) {
+    scroll = S.focusCol;
+  }
+
+  S.rowScroll[S.focusRow] = scroll;
+
+  const offset = scroll * 280;
   items.style.transform = `translateX(${-offset}px)`;
 }
 
 /* =========================
-   PLAYER
+   PLAYER (FIXED)
 ========================= */
 function play(index) {
 
@@ -198,7 +198,9 @@ function play(index) {
   if (!ch || !S.player) return;
 
   S.currentIndex = index;
-  showOverlay(ch.name);
+
+  S.isFullscreen = true;
+  S.dom.ui.style.display = "none";
 
   try {
     S.player.stop();
@@ -212,17 +214,34 @@ function play(index) {
     S.player.setStreamingProperty("BUFFERING_TIME", CONFIG.BUFFER);
 
     S.player.prepareAsync(
-      ()=> S.player.play(),
-      e=>console.log("AVPlay error", e)
+      () => S.player.play(),
+      err => console.log(err)
     );
 
-  } catch(e){}
+  } catch(e){
+    console.log("play error", e);
+  }
 }
 
 /* =========================
-   ZAP
+   STOP PLAYER
+========================= */
+function stopPlayer() {
+
+  try {
+    S.player.stop();
+    S.player.close();
+  } catch(e){}
+
+  S.isFullscreen = false;
+  S.dom.ui.style.display = "block";
+}
+
+/* =========================
+   ZAPPING
 ========================= */
 function zap(dir) {
+
   let i = S.currentIndex + dir;
 
   if (i < 0) i = S.flat.length - 1;
@@ -232,29 +251,35 @@ function zap(dir) {
 }
 
 /* =========================
-   OVERLAY
+   INPUT (FULL REMOTE SUPPORT)
 ========================= */
-let t;
-function showOverlay(txt) {
-  const o = S.dom.overlay;
-  o.textContent = txt;
-  o.style.opacity = 1;
-
-  clearTimeout(t);
-  t = setTimeout(()=>o.style.opacity=0,2000);
-}
-
-/* =========================
-   INPUT
-========================= */
-let last = 0;
-
 function onKey(e) {
 
-  const now = Date.now();
-  if (now - last < 70) return;
-  last = now;
+  /* FULLSCREEN MODE */
+  if (S.isFullscreen) {
 
+    switch(e.key) {
+
+      case "ChannelUp":
+      case "ArrowUp":
+        zap(1);
+        return;
+
+      case "ChannelDown":
+      case "ArrowDown":
+        zap(-1);
+        return;
+
+      case "Return":
+      case "Escape":
+        stopPlayer();
+        return;
+    }
+
+    return;
+  }
+
+  /* GRID MODE */
   switch(e.key) {
 
     case "ArrowDown":
@@ -280,60 +305,10 @@ function onKey(e) {
       const ch = row.items[S.focusCol];
       play(S.flat.indexOf(ch));
       return;
-
-    case "ChannelUp":
-      zap(1);
-      return;
-
-    case "ChannelDown":
-      zap(-1);
-      return;
   }
 
   clamp();
-  adjustWindow();
   setFocus();
-}
-
-/* =========================
-   WINDOW SHIFT
-========================= */
-function adjustWindow() {
-
-  if (S.focusRow < S.visibleStart) {
-    S.visibleStart = S.focusRow;
-    renderWindow();
-  }
-
-  if (S.focusRow >= S.visibleStart + S.VISIBLE_ROWS) {
-    S.visibleStart = S.focusRow - S.VISIBLE_ROWS + 1;
-    renderWindow();
-  }
-}
-
-/* =========================
-   HEADER ACTIONS
-========================= */
-function bindHeader() {
-
-  const search = document.getElementById("searchBtn");
-  const add = document.getElementById("addBtn");
-
-  if (search) {
-    search.onclick = () => {
-      console.log("Search coming next");
-    };
-  }
-
-  if (add) {
-    add.onclick = () => {
-      const url = prompt("Enter M3U URL");
-      if (url) {
-        localStorage.setItem("custom_playlist", url);
-        location.reload();
-      }
-    };
-  }
 }
 
 /* =========================
@@ -342,8 +317,8 @@ function bindHeader() {
 function clamp() {
   S.focusRow = Math.max(0, Math.min(S.focusRow, S.rows.length - 1));
 
-  const maxCol = S.rows[S.focusRow].items.length - 1;
-  S.focusCol = Math.max(0, Math.min(S.focusCol, maxCol));
+  const max = S.rows[S.focusRow].items.length - 1;
+  S.focusCol = Math.max(0, Math.min(S.focusCol, max));
 }
 
 function div(cls, txt) {
