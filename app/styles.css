@@ -11,19 +11,18 @@
     --border-color: #333;
 }
 
-/* Base font size scales with screen width */
 html {
     font-size: 16px;
 }
 
-/* For 2K screens (2560x1440) */
+/* 2K screens */
 @media screen and (min-width: 2000px) {
     html {
         font-size: 20px;
     }
 }
 
-/* For 4K screens (3840x2160) */
+/* 4K screens */
 @media screen and (min-width: 3500px) {
     html {
         font-size: 28px;
@@ -43,6 +42,12 @@ body {
     height: 100vh;
     overflow: hidden;
     line-height: 1.4;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 /* ===== SPLASH SCREEN ===== */
@@ -74,24 +79,12 @@ body {
     align-items: center;
     justify-content: center;
     gap: 1rem;
-    font-size: 4rem; /* 64px at base */
+    font-size: 4rem;
     font-weight: 600;
     color: var(--tv-red-light);
     margin-bottom: 1.5rem;
     font-family: 'Trade Gothic', 'GT America', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     letter-spacing: -0.02em;
-}
-
-@media screen and (min-width: 2000px) {
-    .splash-logo {
-        font-size: 5rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .splash-logo {
-        font-size: 7rem;
-    }
 }
 
 .youtube-icon {
@@ -125,25 +118,6 @@ body {
     font-weight: 400;
 }
 
-@media screen and (min-width: 2000px) {
-    .splash-tagline {
-        font-size: 2rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .splash-tagline {
-        font-size: 2.5rem;
-    }
-}
-
-/* ===== APP CONTAINER ===== */
-#app {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
 /* ===== TOP BAR ===== */
 .top-bar {
     display: flex;
@@ -156,24 +130,31 @@ body {
     z-index: 100;
 }
 
+.menu-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.75rem;
+    cursor: pointer;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.menu-btn.tv-focused {
+    background: #333;
+}
+
 .logo {
     font-size: 1.4rem;
     font-weight: 600;
     color: var(--tv-red-light);
     font-family: 'Trade Gothic', 'GT America', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     letter-spacing: -0.02em;
-}
-
-@media screen and (min-width: 2000px) {
-    .logo {
-        font-size: 1.8rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .logo {
-        font-size: 2.2rem;
-    }
 }
 
 .top-actions {
@@ -196,27 +177,10 @@ body {
     font-weight: 500;
 }
 
-@media screen and (min-width: 2000px) {
-    .search-icon {
-        font-size: 2rem;
-        width: 4rem;
-        height: 4rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .search-icon {
-        font-size: 2.5rem;
-        width: 5rem;
-        height: 5rem;
-    }
-}
-
 .search-icon.tv-focused {
     background: #333;
 }
 
-/* Small YouTube icon */
 .youtube-icon-small {
     width: 3rem;
     height: 3rem;
@@ -228,40 +192,12 @@ body {
     transition: background 0.2s;
 }
 
-@media screen and (min-width: 2000px) {
-    .youtube-icon-small {
-        width: 4rem;
-        height: 4rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .youtube-icon-small {
-        width: 5rem;
-        height: 5rem;
-    }
-}
-
 .youtube-icon-small .youtube-red {
     width: 1.8rem;
     height: 1.3rem;
     background: var(--tv-red);
     border-radius: 0.4rem;
     position: relative;
-}
-
-@media screen and (min-width: 2000px) {
-    .youtube-icon-small .youtube-red {
-        width: 2.4rem;
-        height: 1.7rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .youtube-icon-small .youtube-red {
-        width: 3rem;
-        height: 2.2rem;
-    }
 }
 
 .youtube-icon-small .youtube-red::after {
@@ -280,6 +216,83 @@ body {
 
 .youtube-icon-small.tv-focused {
     background: #333;
+}
+
+/* ===== SIDE PANEL ===== */
+.side-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100%;
+    background: #0f0f0f;
+    border-right: 1px solid var(--border-color);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 200;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.side-panel.open {
+    transform: translateX(0);
+}
+
+.panel-header {
+    padding: 2rem 1rem 1rem 1.5rem;
+}
+
+.panel-logo {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--tv-red-light);
+    font-family: 'Trade Gothic', 'GT America', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.panel-menu {
+    flex: 1;
+    list-style: none;
+    padding: 0.5rem 0;
+}
+
+.panel-footer {
+    padding: 1rem 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.panel-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    margin: 0.25rem 0.5rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-left: 4px solid transparent;
+}
+
+.panel-item .icon {
+    font-size: 1.5rem;
+    width: 2rem;
+    text-align: center;
+    margin-right: 1rem;
+}
+
+.panel-item .label {
+    font-size: 1.1rem;
+    font-weight: 500;
+    font-family: Roboto, sans-serif;
+}
+
+.panel-item.active {
+    background: #1a1a1a;
+    border-left-color: var(--tv-red-light);
+}
+
+.panel-item.tv-focused {
+    background: #2a2a2a;
+    border-left-color: var(--tv-red-light);
 }
 
 /* ===== SEARCH OVERLAY ===== */
@@ -318,20 +331,6 @@ body {
     font-family: Roboto, sans-serif;
 }
 
-@media screen and (min-width: 2000px) {
-    .search-input {
-        font-size: 2.2rem;
-        padding: 1.5rem 5rem 1.5rem 2.5rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .search-input {
-        font-size: 2.8rem;
-        padding: 2rem 6rem 2rem 3rem;
-    }
-}
-
 .search-input.tv-focused {
     border-color: var(--tv-red);
     box-shadow: 0 0 20px rgba(255,0,0,0.5);
@@ -353,22 +352,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-@media screen and (min-width: 2000px) {
-    .search-close {
-        font-size: 2.5rem;
-        width: 5rem;
-        height: 5rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .search-close {
-        font-size: 3rem;
-        width: 6rem;
-        height: 6rem;
-    }
 }
 
 .search-close.tv-focused {
@@ -413,36 +396,12 @@ body {
     letter-spacing: -0.02em;
 }
 
-@media screen and (min-width: 2000px) {
-    .row-title {
-        font-size: 2rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .row-title {
-        font-size: 2.5rem;
-    }
-}
-
 .row-link {
     color: var(--text-secondary);
     font-size: 1rem;
     cursor: pointer;
     font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     font-weight: 400;
-}
-
-@media screen and (min-width: 2000px) {
-    .row-link {
-        font-size: 1.4rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .row-link {
-        font-size: 1.8rem;
-    }
 }
 
 .row-link.tv-focused {
@@ -466,7 +425,7 @@ body {
 /* ===== CHANNEL TILE ===== */
 .channel-item {
     flex: 0 0 auto;
-    width: 18rem; /* 288px at base 16px */
+    width: 18rem;
     background: var(--bg-card);
     border-radius: 0.75rem;
     overflow: hidden;
@@ -477,18 +436,6 @@ body {
     position: relative;
 }
 
-@media screen and (min-width: 2000px) {
-    .channel-item {
-        width: 22rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .channel-item {
-        width: 28rem;
-    }
-}
-
 .channel-item.tv-focused {
     transform: scale(1.05);
     border-color: var(--tv-red);
@@ -496,7 +443,6 @@ body {
     z-index: 10;
 }
 
-/* Thumbnail area */
 .channel-thumb {
     aspect-ratio: 16 / 9;
     background: #2a2a2a;
@@ -507,7 +453,6 @@ body {
     overflow: hidden;
 }
 
-/* Logo image */
 .channel-logo {
     width: 100%;
     height: 100%;
@@ -516,7 +461,6 @@ body {
     padding: 0.5rem;
 }
 
-/* Fallback emoji */
 .fallback-emoji {
     font-size: 3rem;
     display: none;
@@ -526,19 +470,6 @@ body {
     transform: translate(-50%, -50%);
 }
 
-@media screen and (min-width: 2000px) {
-    .fallback-emoji {
-        font-size: 4rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .fallback-emoji {
-        font-size: 5rem;
-    }
-}
-
-/* Channel number badge */
 .channel-number {
     position: absolute;
     top: 0.5rem;
@@ -551,24 +482,9 @@ body {
     border-radius: 0.25rem;
     border-left: 3px solid var(--tv-red-light);
     z-index: 5;
-    font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    font-family: Roboto, sans-serif;
 }
 
-@media screen and (min-width: 2000px) {
-    .channel-number {
-        font-size: 1.2rem;
-        padding: 0.35rem 0.7rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .channel-number {
-        font-size: 1.5rem;
-        padding: 0.5rem 1rem;
-    }
-}
-
-/* Gradient overlay on focus */
 .channel-item.tv-focused .channel-thumb::before {
     content: "";
     position: absolute;
@@ -581,7 +497,6 @@ body {
     z-index: 2;
 }
 
-/* Play icon overlay */
 .channel-thumb::after {
     content: "▶";
     position: absolute;
@@ -605,43 +520,14 @@ body {
     border: 2px solid white;
 }
 
-@media screen and (min-width: 2000px) {
-    .channel-thumb::after {
-        font-size: 4rem;
-        width: 7rem;
-        height: 7rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .channel-thumb::after {
-        font-size: 5rem;
-        width: 9rem;
-        height: 9rem;
-    }
-}
-
 .channel-item.tv-focused .channel-thumb::after {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1.1);
 }
 
-/* Channel info */
 .channel-info {
     padding: 0.875rem;
     transition: background 0.2s;
-}
-
-@media screen and (min-width: 2000px) {
-    .channel-info {
-        padding: 1.2rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .channel-info {
-        padding: 1.5rem;
-    }
 }
 
 .channel-item.tv-focused .channel-info {
@@ -660,18 +546,6 @@ body {
     letter-spacing: -0.02em;
 }
 
-@media screen and (min-width: 2000px) {
-    .channel-name {
-        font-size: 1.4rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .channel-name {
-        font-size: 1.8rem;
-    }
-}
-
 .channel-item.tv-focused .channel-name {
     color: var(--tv-red);
     font-weight: 700;
@@ -683,20 +557,8 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    font-family: Roboto, sans-serif;
     font-weight: 400;
-}
-
-@media screen and (min-width: 2000px) {
-    .channel-program {
-        font-size: 1.2rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .channel-program {
-        font-size: 1.5rem;
-    }
 }
 
 /* ===== PLAYER OVERLAY ===== */
@@ -737,26 +599,49 @@ body {
     cursor: pointer;
     z-index: 2100;
     transition: background 0.2s;
-    font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    font-family: Roboto, sans-serif;
     font-weight: 400;
-}
-
-@media screen and (min-width: 2000px) {
-    .close-player {
-        font-size: 1.8rem;
-        padding: 1rem 2rem;
-    }
-}
-
-@media screen and (min-width: 3500px) {
-    .close-player {
-        font-size: 2.2rem;
-        padding: 1.3rem 2.5rem;
-    }
 }
 
 .close-player.tv-focused {
     background: var(--tv-red-light);
     border-color: var(--tv-red-light);
     transform: scale(1.05);
+}
+
+/* ===== RESPONSIVE MEDIA QUERIES FOR 2K/4K ===== */
+@media screen and (min-width: 2000px) {
+    .splash-logo { font-size: 5rem; }
+    .splash-tagline { font-size: 2rem; }
+    .logo { font-size: 1.8rem; }
+    .search-icon, .menu-btn, .youtube-icon-small { width: 4rem; height: 4rem; font-size: 2rem; }
+    .youtube-icon-small .youtube-red { width: 2.4rem; height: 1.7rem; }
+    .panel-item .label { font-size: 1.4rem; }
+    .row-title { font-size: 2rem; }
+    .row-link { font-size: 1.4rem; }
+    .channel-item { width: 22rem; }
+    .fallback-emoji { font-size: 4rem; }
+    .channel-number { font-size: 1.2rem; padding: 0.35rem 0.7rem; }
+    .channel-thumb::after { font-size: 4rem; width: 7rem; height: 7rem; }
+    .channel-name { font-size: 1.4rem; }
+    .channel-program { font-size: 1.2rem; }
+    .close-player { font-size: 1.8rem; padding: 1rem 2rem; }
+}
+
+@media screen and (min-width: 3500px) {
+    .splash-logo { font-size: 7rem; }
+    .splash-tagline { font-size: 2.5rem; }
+    .logo { font-size: 2.2rem; }
+    .search-icon, .menu-btn, .youtube-icon-small { width: 5rem; height: 5rem; font-size: 2.5rem; }
+    .youtube-icon-small .youtube-red { width: 3rem; height: 2.2rem; }
+    .panel-item .label { font-size: 1.8rem; }
+    .row-title { font-size: 2.5rem; }
+    .row-link { font-size: 1.8rem; }
+    .channel-item { width: 28rem; }
+    .fallback-emoji { font-size: 5rem; }
+    .channel-number { font-size: 1.5rem; padding: 0.5rem 1rem; }
+    .channel-thumb::after { font-size: 5rem; width: 9rem; height: 9rem; }
+    .channel-name { font-size: 1.8rem; }
+    .channel-program { font-size: 1.5rem; }
+    .close-player { font-size: 2.2rem; padding: 1.3rem 2.5rem; }
 }
