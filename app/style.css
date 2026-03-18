@@ -1,147 +1,73 @@
 body {
   margin: 0;
-  background: #0a0a0a;
-  color: #e5e5e5;
-  font-family: system-ui, sans-serif;
+  background: #000;
+  font-family: sans-serif;
   overflow: hidden;
 }
 
-.app {
-  width: 100vw;
-  height: 100vh;
+/* AVPlay */
+#player {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: black;
+}
+
+/* UI */
+#ui {
   position: relative;
-}
-
-/* 🔍 Search */
-.topbar {
-  position: absolute;
-  top: 20px;
-  right: 30px;
-  z-index: 10;
-}
-
-.search-icon {
-  width: 50px;
-  height: 50px;
-  background: rgba(40,40,40,0.8);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  transition: 0.2s;
-}
-
-.search-icon.active {
-  transform: scale(1.2);
-  border: 2px solid #fff;
-}
-
-/* 🔎 Overlay */
-.search-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(10,10,10,0.98);
-  z-index: 20;
-  padding: 80px;
-}
-
-.hidden { display: none; }
-
-#searchInput {
-  width: 100%;
-  height: 60px;
-  font-size: 26px;
-  margin-bottom: 40px;
-  background: #111;
-  border: none;
-  color: #fff;
-  padding: 0 20px;
-}
-
-#searchResults {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-}
-
-/* 🎬 Player */
-.player-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-}
-
-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: brightness(0.5);
-}
-
-.overlay {
-  position: absolute;
-  bottom: 60px;
-  left: 60px;
   z-index: 2;
+  padding: 70px;
 }
 
-/* 📺 Rows */
-.rows {
-  position: absolute;
-  inset: 0;
-  padding: 100px 80px;
-  z-index: 5;
+/* overlay info */
+#overlay {
+  position: fixed;
+  bottom: 60px;
+  left: 80px;
+  color: white;
+  font-size: 22px;
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
+/* rows */
 .row {
-  margin-bottom: 50px;
+  margin-bottom: 40px;
 }
 
 .row-title {
-  font-size: 20px;
-  margin-bottom: 15px;
   color: #aaa;
+  font-size: 22px;
+  margin-bottom: 10px;
 }
 
+/* horizontal scroll */
 .row-items {
   display: flex;
-  gap: 28px;
+  gap: 20px;
 }
 
-/* 🧱 Tiles */
+/* tile */
 .card {
   width: 260px;
   height: 150px;
   background: #111;
-  border-radius: 16px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.25s ease;
-  position: relative;
-  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s;
 }
 
+/* logo */
 .card img {
-  max-width: 70%;
-  max-height: 70%;
-  object-fit: contain;
-}
-
-/* fallback name */
-.card::after {
-  content: attr(data-name);
-  position: absolute;
-  bottom: 10px;
-  left: 12px;
-  font-size: 14px;
-  color: #888;
+  max-width: 75%;
+  max-height: 75%;
 }
 
 /* focus */
 .card.active {
-  transform: scale(1.12);
-  border: 2px solid #fff;
-  background: #1a1a1a;
+  transform: scale(1.18);
+  box-shadow: 0 0 30px rgba(255,255,255,0.25);
 }
