@@ -3,17 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Miso IPTV</title>
+  <title>Live TV</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <div class="app">
-    <!-- Top row: categories only -->
+    <!-- Top row: categories only (single row) -->
     <div class="top-row">
       <div class="category-bar" id="categoryBar"></div>
     </div>
 
-    <!-- Main area: video player -->
+    <!-- Left sidebar: channel list with search -->
+    <aside class="channel-sidebar" id="channelSidebar">
+      <h1>Live TV</h1>
+      <div class="search-row">
+        <input id="searchInput" type="text" placeholder="Search channel..." />
+      </div>
+      <ul id="channelList"></ul>
+    </aside>
+
+    <!-- Main area: video player (right side) -->
     <main class="player-area" id="playerArea">
       <video id="video" controls autoplay></video>
       <div class="player-header">
@@ -22,17 +31,9 @@
       </div>
     </main>
 
-    <!-- Right sidebar: channel list with search -->
-    <aside class="channel-sidebar" id="channelSidebar">
-      <div class="search-row">
-        <input id="searchInput" type="text" placeholder="Search channel..." />
-      </div>
-      <ul id="channelList"></ul>
-    </aside>
-
     <!-- Footer help -->
     <div class="footer help">
-      <p>Remote: ↑↓ select channel, ←→ focus, Enter play, double‑click channel / Enter (video focused) toggles fullscreen, <strong>Green key reloads playlist</strong>.</p>
+      <p>Remote: ↑↓ select channel, ←→ focus, Enter play, double‑click channel / Enter (video focused) toggles fullscreen, Green key reloads playlist.</p>
     </div>
   </div>
 
