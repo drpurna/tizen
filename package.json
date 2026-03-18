@@ -1,10 +1,10 @@
 {
-  "name": "@drpurna/smarttv",
+  "name": "@drpurna/tizentv",
   "appName": "Smart TV",
   "version": "2.0.0",
   "description": "YouTube TV style IPTV player for Tizen (Smart TV)",
   "packageType": "app",
-  "main": "mods/index.js",
+  "main": "service.js",
   "author": "drpurna",
   "keys": [
     "MediaPlayPause",
@@ -17,13 +17,13 @@
     "MediaTrackPrevious"
   ],
   "repository": {
-    "url": "https://github.com/drpurna/smarttv"
+    "url": "https://github.com/drpurna/tizentv"
   },
   "license": "MIT",
   "tizenbrew": {
     "moduleType": "app",
     "appName": "Smart TV",
-    "packageName": "com.drpurna.smarttv",
+    "packageName": "com.drpurna.tizentv",
     "version": "2.0.0",
     "tizenVersion": "4.0",
     "requiredPermissions": [
@@ -34,7 +34,7 @@
     "screenshots": [],
     "repository": {
       "type": "git",
-      "url": "https://github.com/drpurna/smarttv"
+      "url": "https://github.com/drpurna/tizentv"
     }
   }
 }
