@@ -1,102 +1,168 @@
 let channels = [];
-let rowIndex = 0;
-let colIndex = 0;
-let mode = "browse";
+let grouped = {};
+let focusEl = null;
+let current = { row: 0, col: 0 };
+let player, video;
 
+/* ---------- LOAD + CACHE ---------- */
 async function loadChannels() {
+  const cached = localStorage.getItem("channels");
+
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
   const res = await fetch("https://iptv-org.github.io/iptv/languages/telugu.m3u");
   const text = await res.text();
 
-  channels = text.split("#EXTINF").slice(1).map(item => ({
-    name: item.match(/,(.*)/)?.[1],
-    logo: item.match(/tvg-logo="(.*?)"/)?.[1],
-    url: item.split("\n")[1],
-    group: item.match(/group-title="(.*?)"/)?.[1]
+  const parsed = text.split("#EXTINF").slice(1).map(e => ({
+    name: e.match(/,(.*)/)?.[1],
+    logo: e.match(/tvg-logo="(.*?)"/)?.[1],
+    url: e.split("\n")[1],
+    group: e.match(/group-title="(.*?)"/)?.[1] || "Other"
   }));
 
-  render();
+  localStorage.setItem("channels", JSON.stringify(parsed));
+  return parsed;
 }
 
-function groupData() {
+/* ---------- GROUP ---------- */
+function groupChannels(list) {
   return {
-    News: channels.filter(c => c.group?.includes("News")),
-    Movies: channels.filter(c => c.group?.includes("Movies")),
-    Entertainment: channels.filter(c => c.group?.includes("Entertainment")),
-    All: channels
+    News: list.filter(c => c.group.includes("News")),
+    Movies: list.filter(c => c.group.includes("Movies")),
+    Entertainment: list.filter(c => c.group.includes("Entertainment")),
+    All: list
   };
 }
 
-function render() {
-  if(mode==="player") return;
-
-  const data = groupData();
+/* ---------- BUILD UI (ONCE) ---------- */
+function buildUI() {
   const app = document.getElementById("app");
 
-  let rowsHTML = "";
-  let rowKeys = Object.keys(data);
+  Object.keys(grouped).forEach((key, r) => {
+    const row = document.createElement("div");
+    row.className = "row";
 
-  rowKeys.forEach((key, r) => {
-    rowsHTML += `
-      <div class="row">
-        <h2>${key}</h2>
-        <div class="row-scroll">
-          ${data[key].map((c,i)=>`
-            <div class="tile ${(r===rowIndex && i===colIndex)?'active':''}">
-              <img src="${c.logo}">
-              <p>${c.name}</p>
-            </div>
-          `).join("")}
-        </div>
-      </div>
-    `;
+    const title = document.createElement("h2");
+    title.innerText = key;
+
+    const scroll = document.createElement("div");
+    scroll.className = "row-scroll";
+
+    grouped[key].forEach((c, i) => {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.dataset.row = r;
+      tile.dataset.col = i;
+      tile.dataset.url = c.url;
+
+      tile.innerHTML = `
+        <img src="${c.logo}">
+        <p>${c.name}</p>
+      `;
+
+      scroll.appendChild(tile);
+    });
+
+    row.appendChild(title);
+    row.appendChild(scroll);
+    app.appendChild(row);
   });
 
-  const heroChannel = data[rowKeys[rowIndex]][colIndex];
-
-  app.innerHTML = `
-    <div class="hero">
-      <video src="${heroChannel?.url}" autoplay muted loop></video>
-      <div class="overlay">${heroChannel?.name}</div>
-    </div>
-    ${rowsHTML}
-  `;
+  setFocus(document.querySelector(".tile"));
 }
 
-function play() {
-  const data = groupData();
-  const rowKeys = Object.keys(data);
-  const ch = data[rowKeys[rowIndex]][colIndex];
+/* ---------- FOCUS ENGINE ---------- */
+function setFocus(el) {
+  if (!el) return;
 
-  mode="player";
-  document.body.innerHTML = `
-    <div class="player">
-      <video src="${ch.url}" controls autoplay style="width:100%;height:100%"></video>
-    </div>
-  `;
+  if (focusEl) focusEl.classList.remove("active");
+
+  el.classList.add("active");
+  focusEl = el;
+
+  el.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+    inline: "center"
+  });
 }
 
-window.addEventListener("keydown", (e)=>{
-  if(mode==="player" && e.keyCode===10009){ // back
-    location.reload();
+/* ---------- NAVIGATION ---------- */
+function moveFocus(dir) {
+  let r = current.row;
+  let c = current.col;
+
+  if (dir === "right") c++;
+  if (dir === "left") c--;
+  if (dir === "down") { r++; c = 0; }
+  if (dir === "up") { r--; c = 0; }
+
+  const next = document.querySelector(
+    `.tile[data-row="${r}"][data-col="${c}"]`
+  );
+
+  if (next) {
+    current = { row: r, col: c };
+    setFocus(next);
   }
+}
 
-  const data = groupData();
-  const rowKeys = Object.keys(data);
+/* ---------- PLAYER ---------- */
+function initPlayer() {
+  video = document.createElement("video");
+  video.style.width = "100%";
+  video.style.height = "100%";
 
-  if(e.keyCode===39) colIndex++;
-  if(e.keyCode===37) colIndex--;
-  if(e.keyCode===40) { rowIndex++; colIndex=0; }
-  if(e.keyCode===38) { rowIndex--; colIndex=0; }
-  if(e.keyCode===13) play();
+  document.body.innerHTML = "";
+  document.body.appendChild(video);
 
-  if(rowIndex<0) rowIndex=0;
-  if(rowIndex>=rowKeys.length) rowIndex=rowKeys.length-1;
+  player = new shaka.Player(video);
+}
 
-  const maxCol = data[rowKeys[rowIndex]].length-1;
-  if(colIndex<0) colIndex=0;
-  if(colIndex>maxCol) colIndex=maxCol;
+async function play(url) {
+  if (!player) initPlayer();
 
-  render();
+  try {
+    await player.load(url);
+  } catch {
+    video.src = url;
+  }
+}
+
+/* ---------- PRELOAD ---------- */
+function preload(channels) {
+  channels.slice(0, 3).forEach(c => {
+    const v = document.createElement("video");
+    v.src = c.url;
+    v.preload = "auto";
+  });
+}
+
+/* ---------- REMOTE ---------- */
+window.addEventListener("keydown", (e) => {
+  switch (e.keyCode) {
+    case 39: moveFocus("right"); break;
+    case 37: moveFocus("left"); break;
+    case 40: moveFocus("down"); break;
+    case 38: moveFocus("up"); break;
+    case 13: play(focusEl.dataset.url); break;
+  }
 });
 
-loadChannels();
+/* ---------- INIT ---------- */
+(async function init() {
+  channels = await loadChannels();
+  grouped = groupChannels(channels);
+
+  preload(channels);
+  buildUI();
+
+  // splash fade
+  setTimeout(() => {
+    const splash = document.getElementById("splash");
+    splash.style.opacity = "0";
+    setTimeout(() => splash.remove(), 500);
+  }, 1500);
+})();
