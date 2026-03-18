@@ -12,7 +12,7 @@ body {
   position: relative;
 }
 
-/* 🔍 Search Icon */
+/* 🔍 Search */
 .topbar {
   position: absolute;
   top: 20px;
@@ -37,7 +37,7 @@ body {
   border: 2px solid #fff;
 }
 
-/* 🔎 Search Overlay */
+/* 🔎 Overlay */
 .search-overlay {
   position: absolute;
   inset: 0;
@@ -46,9 +46,7 @@ body {
   padding: 80px;
 }
 
-.hidden {
-  display: none;
-}
+.hidden { display: none; }
 
 #searchInput {
   width: 100%;
@@ -106,13 +104,12 @@ video {
   color: #aaa;
 }
 
-/* 🎯 TILE ROW */
 .row-items {
   display: flex;
   gap: 28px;
 }
 
-/* 🧱 TILE */
+/* 🧱 Tiles */
 .card {
   width: 260px;
   height: 150px;
@@ -126,15 +123,13 @@ video {
   overflow: hidden;
 }
 
-/* LOGO */
 .card img {
   max-width: 70%;
   max-height: 70%;
   object-fit: contain;
-  filter: none; /* keep logos colored */
 }
 
-/* FALLBACK TEXT */
+/* fallback name */
 .card::after {
   content: attr(data-name);
   position: absolute;
@@ -144,7 +139,7 @@ video {
   color: #888;
 }
 
-/* ✨ FOCUS */
+/* focus */
 .card.active {
   transform: scale(1.12);
   border: 2px solid #fff;
