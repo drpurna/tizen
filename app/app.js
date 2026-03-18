@@ -1,9 +1,12 @@
 /* =========================
-   IPTV ENGINE v3 FINAL
+   IPTV ENGINE v4 FINAL
 ========================= */
 
 const App = (() => {
 
+/* =========================
+   STATE
+========================= */
 const S = {
   channels: [],
   rows: [],
@@ -25,13 +28,20 @@ const S = {
   }
 };
 
+/* =========================
+   CONFIG
+========================= */
 const CONFIG = {
-  PLAYLIST: "https://iptv-org.github.io/iptv/languages/tel.m3u",
-  CACHE_KEY: "iptv_cache_v1",
+  PLAYLIST: localStorage.getItem("custom_playlist") 
+    || "https://iptv-org.github.io/iptv/languages/tel.m3u",
+
+  CACHE_KEY: "iptv_cache_v2",
   BUFFER: "300"
 };
 
-/* INIT */
+/* =========================
+   INIT
+========================= */
 async function init() {
 
   try { S.player = webapis.avplay; } catch(e){}
@@ -48,9 +58,13 @@ async function init() {
 
   renderWindow();
   setFocus();
+
+  bindHeader();
 }
 
-/* PARSE */
+/* =========================
+   PARSE
+========================= */
 function parse(text) {
   const lines = text.split("\n");
   let res = [], meta = {};
@@ -74,8 +88,11 @@ function parse(text) {
   return res;
 }
 
-/* BUILD */
+/* =========================
+   BUILD (SORTED)
+========================= */
 function build() {
+
   const map = {};
 
   S.channels.forEach(ch => {
@@ -83,7 +100,7 @@ function build() {
     map[ch.group].push(ch);
   });
 
-  S.groups = Object.keys(map);
+  S.groups = Object.keys(map).sort((a,b)=>a.localeCompare(b));
 
   S.rows = S.groups.map(g => ({
     title: g,
@@ -93,7 +110,9 @@ function build() {
   S.flat = S.channels;
 }
 
-/* VIRTUAL RENDER */
+/* =========================
+   VIRTUAL RENDER
+========================= */
 function renderWindow() {
 
   const start = S.visibleStart;
@@ -138,7 +157,9 @@ function renderWindow() {
   S.dom.rows.appendChild(frag);
 }
 
-/* FOCUS */
+/* =========================
+   FOCUS + HORIZONTAL SCROLL
+========================= */
 function setFocus() {
 
   document.querySelectorAll(".card.active")
@@ -154,11 +175,23 @@ function setFocus() {
 
   if (el) {
     el.classList.add("active");
-    el.scrollIntoView({block:"center", inline:"center"});
   }
+
+  scrollRow(items);
 }
 
-/* PLAYER */
+/* =========================
+   ROW SCROLL
+========================= */
+function scrollRow(items) {
+
+  const offset = S.focusCol * 280;
+  items.style.transform = `translateX(${-offset}px)`;
+}
+
+/* =========================
+   PLAYER
+========================= */
 function play(index) {
 
   const ch = S.flat[index];
@@ -186,7 +219,9 @@ function play(index) {
   } catch(e){}
 }
 
-/* ZAP */
+/* =========================
+   ZAP
+========================= */
 function zap(dir) {
   let i = S.currentIndex + dir;
 
@@ -196,7 +231,9 @@ function zap(dir) {
   play(i);
 }
 
-/* OVERLAY */
+/* =========================
+   OVERLAY
+========================= */
 let t;
 function showOverlay(txt) {
   const o = S.dom.overlay;
@@ -207,7 +244,9 @@ function showOverlay(txt) {
   t = setTimeout(()=>o.style.opacity=0,2000);
 }
 
-/* INPUT */
+/* =========================
+   INPUT
+========================= */
 let last = 0;
 
 function onKey(e) {
@@ -256,7 +295,9 @@ function onKey(e) {
   setFocus();
 }
 
-/* WINDOW SHIFT */
+/* =========================
+   WINDOW SHIFT
+========================= */
 function adjustWindow() {
 
   if (S.focusRow < S.visibleStart) {
@@ -270,7 +311,34 @@ function adjustWindow() {
   }
 }
 
-/* HELPERS */
+/* =========================
+   HEADER ACTIONS
+========================= */
+function bindHeader() {
+
+  const search = document.getElementById("searchBtn");
+  const add = document.getElementById("addBtn");
+
+  if (search) {
+    search.onclick = () => {
+      console.log("Search coming next");
+    };
+  }
+
+  if (add) {
+    add.onclick = () => {
+      const url = prompt("Enter M3U URL");
+      if (url) {
+        localStorage.setItem("custom_playlist", url);
+        location.reload();
+      }
+    };
+  }
+}
+
+/* =========================
+   HELPERS
+========================= */
 function clamp() {
   S.focusRow = Math.max(0, Math.min(S.focusRow, S.rows.length - 1));
 
@@ -285,7 +353,9 @@ function div(cls, txt) {
   return d;
 }
 
-/* START */
+/* =========================
+   START
+========================= */
 window.addEventListener("keydown", onKey);
 
 return { init };
