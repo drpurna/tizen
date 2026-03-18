@@ -8,37 +8,32 @@
 </head>
 <body>
   <div class="app">
-    <!-- Top row: categories -->
-    <div class="top-row" id="topRow">
+    <!-- Top row: categories only -->
+    <div class="top-row">
       <div class="category-bar" id="categoryBar"></div>
     </div>
 
-    <!-- Left column: sidebar (channel list and controls) -->
-    <aside class="sidebar" id="sidebar">
-      <h1>Miso IPTV</h1>
-      <div class="row">
-        <input id="playlistUrl" type="text" placeholder="M3U URL..." />
+    <!-- Main area: video player -->
+    <main class="player-area" id="playerArea">
+      <video id="video" controls autoplay></video>
+      <div class="player-header">
+        <h2 id="nowPlaying">No channel selected</h2>
+        <span id="statusText">Idle</span>
       </div>
-      <div class="row">
-        <button id="loadBtn">Load Playlist</button>
-      </div>
-      <div class="row">
+    </main>
+
+    <!-- Right sidebar: channel list with search -->
+    <aside class="channel-sidebar" id="channelSidebar">
+      <div class="search-row">
         <input id="searchInput" type="text" placeholder="Search channel..." />
       </div>
       <ul id="channelList"></ul>
     </aside>
 
-    <!-- Right column: player area -->
-    <main class="player-area" id="playerArea">
-      <div class="player-header">
-        <h2 id="nowPlaying">No channel selected</h2>
-        <span id="statusText">Idle</span>
-      </div>
-      <video id="video" controls autoplay></video>
-      <div class="help">
-        <p>Remote: ↑↓ select channel, ←→ focus, Enter play, <strong>double‑click channel / Enter (while video focused) toggles fullscreen</strong>, Red focus URL, Green reload playlist.</p>
-      </div>
-    </main>
+    <!-- Footer help -->
+    <div class="footer help">
+      <p>Remote: ↑↓ select channel, ←→ focus, Enter play, double‑click channel / Enter (video focused) toggles fullscreen, <strong>Green key reloads playlist</strong>.</p>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
