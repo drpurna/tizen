@@ -1,5 +1,4 @@
-const playlistUrlEl = document.getElementById('playlistUrl');
-const loadBtn = document.getElementById('loadBtn');
+// No playlistUrlEl or loadBtn
 const searchInput = document.getElementById('searchInput');
 const channelListEl = document.getElementById('channelList');
 const nowPlayingEl = document.getElementById('nowPlaying');
@@ -10,11 +9,11 @@ const categoryBar = document.getElementById('categoryBar');
 let channels = [];
 let filtered = [];
 let selectedIndex = 0;
-let focusArea = 'list'; // list | player | controls
+let focusArea = 'list'; // list | player
 let hls = null;
 
-const DEFAULT_PLAYLIST = localStorage.getItem('misoIptv:lastPlaylist') || 'https://iptv-org.github.io/iptv/languages/tel.m3u';
-playlistUrlEl.value = DEFAULT_PLAYLIST;
+// Fixed playlist URL
+const PLAYLIST_URL = 'https://iptv-org.github.io/iptv/languages/tel.m3u';
 
 function setStatus(text) {
   statusTextEl.textContent = text;
@@ -55,12 +54,10 @@ function parseM3U(text) {
   return out;
 }
 
-// Populate the existing category bar (now in HTML)
 function updateCategoryBar(allChannels) {
   const groups = [...new Set(allChannels.map(ch => ch.group))].sort();
   categoryBar.innerHTML = '';
 
-  // "All" button
   const allBtn = document.createElement('button');
   allBtn.textContent = 'All';
   allBtn.classList.add('category-btn', 'active');
@@ -119,14 +116,12 @@ function renderList() {
       </div>
     `;
 
-    // Single click: select and play
     li.addEventListener('click', () => {
       selectedIndex = idx;
       renderList();
       playSelected();
     });
 
-    // Double-click: toggle fullscreen (for mouse users)
     li.addEventListener('dblclick', () => {
       toggleFullscreen();
     });
@@ -138,12 +133,9 @@ function renderList() {
   if (active) active.scrollIntoView({ block: 'nearest' });
 }
 
-// Fullscreen toggle
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
-    video.requestFullscreen().catch(err => {
-      console.warn('Fullscreen failed:', err);
-    });
+    video.requestFullscreen().catch(err => console.warn('Fullscreen failed:', err));
   } else {
     document.exitFullscreen();
   }
@@ -187,21 +179,15 @@ async function fetchTextWithTimeout(url, timeoutMs = 15000) {
 }
 
 async function loadPlaylist() {
-  const url = playlistUrlEl.value.trim();
-  if (!url) {
-    setStatus('Missing playlist URL');
-    return;
-  }
-
+  setStatus('Loading playlist...');
   try {
-    setStatus('Loading playlist...');
     let text;
-    let usedUrl = url;
+    let usedUrl = PLAYLIST_URL;
 
     try {
-      text = await fetchTextWithTimeout(url, 15000);
+      text = await fetchTextWithTimeout(PLAYLIST_URL, 15000);
     } catch (primaryErr) {
-      const mirrorUrl = githubRawToJsdelivr(url);
+      const mirrorUrl = githubRawToJsdelivr(PLAYLIST_URL);
       if (!mirrorUrl) throw primaryErr;
       setStatus('Primary URL failed, trying mirror...');
       text = await fetchTextWithTimeout(mirrorUrl, 15000);
@@ -214,7 +200,6 @@ async function loadPlaylist() {
     renderList();
     updateCategoryBar(channels);
 
-    localStorage.setItem('misoIptv:lastPlaylist', usedUrl);
     setStatus(`Loaded ${channels.length} channels`);
   } catch (err) {
     console.error(err);
@@ -287,7 +272,6 @@ video.addEventListener('pause', () => setStatus('Paused'));
 video.addEventListener('waiting', () => setStatus('Buffering...'));
 video.addEventListener('error', () => setStatus('Playback error'));
 
-loadBtn.addEventListener('click', loadPlaylist);
 searchInput.addEventListener('input', applySearch);
 
 // Tizen key registration
@@ -301,8 +285,7 @@ searchInput.addEventListener('input', applySearch);
         'MediaStop',
         'MediaFastForward',
         'MediaRewind',
-        'ColorF0Red',
-        'ColorF1Green',
+        'ColorF1Green',   // Keep Green for reload
         'ColorF2Yellow',
         'ColorF3Blue',
       ].forEach(k => {
@@ -316,21 +299,13 @@ window.addEventListener('keydown', (e) => {
   const key = e.key;
   const code = e.keyCode;
 
-  // Navigation
   if (key === 'ArrowUp') {
     if (focusArea === 'list') moveSelection(-1);
-    else if (focusArea === 'player') {
-      // Optionally move focus back to list
-      focusArea = 'list';
-    }
     e.preventDefault();
     return;
   }
   if (key === 'ArrowDown') {
     if (focusArea === 'list') moveSelection(1);
-    else if (focusArea === 'player') {
-      focusArea = 'list';
-    }
     e.preventDefault();
     return;
   }
@@ -348,14 +323,12 @@ window.addEventListener('keydown', (e) => {
     if (focusArea === 'list') {
       playSelected();
     } else if (focusArea === 'player') {
-      // Toggle fullscreen if video is focused
       toggleFullscreen();
     }
     e.preventDefault();
     return;
   }
 
-  // Media keys (same as before)
   if (key === 'MediaPlayPause' || code === 10252) {
     if (video.paused) video.play().catch(() => {});
     else video.pause();
@@ -381,12 +354,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Color keys
-  if (key === 'ColorF0Red' || code === 403) {
-    playlistUrlEl.focus();
-    e.preventDefault();
-    return;
-  }
+  // Green key reloads the playlist
   if (key === 'ColorF1Green' || code === 404) {
     loadPlaylist();
     e.preventDefault();
@@ -394,6 +362,5 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-if (DEFAULT_PLAYLIST) {
-  loadPlaylist();
-}
+// Initial load
+loadPlaylist();
