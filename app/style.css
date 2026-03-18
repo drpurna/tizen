@@ -1,7 +1,7 @@
 :root {
   --bg: #101418;
   --panel: #182028;
-  --accent: #6c757d;        /* neutral gray instead of blue */
+  --accent: #6c757d;        /* neutral gray */
   --text: #f3f6fa;
   --muted: #a7b1bc;
   --border: #2a3642;
@@ -17,16 +17,50 @@ body {
   font-family: Arial, sans-serif;
 }
 
+/* Main grid: top row auto, then two columns */
 .app {
   display: grid;
+  grid-template-rows: auto 1fr;
   grid-template-columns: 420px 1fr;
   height: 100vh;
+}
+
+.top-row {
+  grid-column: 1 / -1;        /* span both columns */
+  background: var(--panel);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.category-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.category-btn {
+  padding: 8px 16px;
+  font-size: 16px;
+  background: var(--button-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+  color: var(--text);
+  transition: all 0.2s;
+}
+.category-btn.active {
+  background: #3a4a58;
+  border-color: #aaa;
+}
+.category-btn:focus {
+  outline: 2px solid #aaa;
+  outline-offset: 2px;
 }
 
 .sidebar {
   background: var(--panel);
   padding: 16px;
-  border-right: 1px solid #2a3642;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
 }
 .sidebar h1 { margin: 0 0 12px; font-size: 24px; }
 .row { margin-bottom: 10px; }
@@ -50,40 +84,13 @@ button:focus {
   border-color: #aaa;
   outline: none;
 }
-button.active {
-  background: #3a4a58;
-  border-color: #aaa;
-}
-
-/* Category bar */
-.category-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 10px 0;
-}
-.category-btn {
-  flex: 1 0 auto;
-  padding: 8px 12px;
-  font-size: 14px;
-  background: var(--button-bg);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  cursor: pointer;
-  color: var(--text);
-  transition: all 0.2s;
-}
-.category-btn.active {
-  background: #3a4a58;
-  border-color: #aaa;
-}
 
 #channelList {
   list-style: none;
   margin: 10px 0 0;
   padding: 0;
-  max-height: calc(100vh - 260px); /* adjusted to leave space for category bar */
-  overflow: auto;
+  max-height: calc(100vh - 280px); /* adjust for top row and inputs */
+  overflow-y: auto;
 }
 #channelList li {
   padding: 8px 12px;
@@ -108,7 +115,7 @@ button.active {
   object-fit: contain;
   border-radius: 4px;
   background: #000;
-  filter: grayscale(100%); /* optional monochrome icons */
+  filter: grayscale(100%);
 }
 .channel-info {
   flex: 1;
@@ -123,6 +130,7 @@ button.active {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  height: 100%;
 }
 .player-header {
   display: flex;
@@ -133,9 +141,16 @@ button.active {
 
 video {
   width: 100%;
-  height: calc(100vh - 140px);
-  border: 1px solid #2a3642;
+  height: calc(100vh - 200px); /* adjust to leave space for header/help */
+  border: 1px solid var(--border);
   border-radius: 10px;
   background: #000;
 }
-.help { color: var(--muted); font-size: 14px; }
+video:fullscreen {
+  object-fit: contain;  /* keep aspect ratio in fullscreen */
+}
+.help {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: auto;
+}
