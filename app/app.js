@@ -1,142 +1,157 @@
-// 🔴 ERROR HANDLER (no more silent crash)
-window.onerror = function(msg, url, line) {
-  document.body.innerHTML =
-    "<pre style='color:red'>" + msg + " at line " + line + "</pre>";
-};
-
-const PLAYLIST = "https://iptv-org.github.io/iptv/languages/tel.m3u";
-
-let video, player;
 let channels = [];
+let categories = {};
+let currentFocus = 0;
 
-// INIT
-window.onload = () => {
-  setupUI();      // ✅ ALWAYS render UI first
-  loadChannels(); // then load data
-};
+const videoContainer = document.getElementById("video");
+const ui = document.getElementById("ui");
 
-// CREATE VIDEO ELEMENT
-function setupUI() {
-
-  const videoBox = document.getElementById("video");
-  const grid = document.getElementById("grid");
-
-  // Video
-  video = document.createElement("video");
-  video.style.width = "100%";
-  video.style.height = "100%";
-  video.autoplay = true;
-  videoBox.appendChild(video);
-
-  // Initial message
-  grid.innerHTML = "<h2>Loading channels...</h2>";
-
-  // AVPlay safe init
-  try {
-    if (window.webapis && webapis.avplay) {
-      player = webapis.avplay;
-    }
-  } catch {}
-}
-
-// LOAD PLAYLIST
+// ===================== LOAD PLAYLIST =====================
 async function loadChannels() {
-
-  let text = "";
+  ui.innerHTML = "Loading channels...";
 
   try {
-    const res = await fetch(PLAYLIST);
-    text = await res.text();
+    const res = await fetch(
+      "https://corsproxy.io/?https://iptv-org.github.io/iptv/languages/tel.m3u"
+    );
+    const text = await res.text();
+    channels = parseM3U(text);
   } catch (e) {
-    document.getElementById("grid").innerHTML =
-      "<h2>Failed to load playlist</h2>";
-    return;
+    console.log("Fetch failed, using fallback");
+
+    channels = [
+      {
+        name: "Test Stream",
+        group: "Test",
+        url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+      }
+    ];
   }
 
-  channels = parse(text);
-
-  if (!channels.length) {
-    document.getElementById("grid").innerHTML =
-      "<h2>No channels found</h2>";
-    return;
-  }
-
+  buildCategories();
   render();
 }
 
-// PARSE M3U
-function parse(txt) {
-  const lines = txt.split("\n");
-  let res = [], meta = {};
+// ===================== PARSE =====================
+function parseM3U(text) {
+  const lines = text.split("\n");
+  const res = [];
 
-  for (let l of lines) {
-    l = l.trim();
+  let name = "", group = "Other";
 
-    if (l.startsWith("#EXTINF")) {
-      meta.name = l.split(",").pop();
-    }
-    else if (l && !l.startsWith("#")) {
-      res.push({ ...meta, url: l });
+  for (let line of lines) {
+    if (line.startsWith("#EXTINF")) {
+      name = line.split(",").pop();
+
+      const g = line.match(/group-title="(.*?)"/);
+      group = g ? g[1] : "Other";
+    } else if (line.startsWith("http")) {
+      res.push({ name, group, url: line.trim() });
     }
   }
 
-  return res.slice(0, 30); // keep small
+  return res.slice(0, 100);
 }
 
-// RENDER UI
+// ===================== CATEGORY =====================
+function buildCategories() {
+  categories = {};
+
+  channels.forEach(ch => {
+    if (!categories[ch.group]) {
+      categories[ch.group] = [];
+    }
+    categories[ch.group].push(ch);
+  });
+}
+
+// ===================== RENDER =====================
 function render() {
+  ui.innerHTML = "";
 
-  const grid = document.getElementById("grid");
-  grid.innerHTML = "";
+  Object.keys(categories).forEach(group => {
+    const row = document.createElement("div");
+    row.className = "row";
 
-  channels.forEach((ch) => {
+    const title = document.createElement("div");
+    title.className = "row-title";
+    title.innerText = group;
 
-    const card = document.createElement("div");
-    card.className = "card";
-    card.textContent = ch.name;
+    const items = document.createElement("div");
+    items.className = "row-items";
 
-    // ✅ CLICK WORKS GUARANTEED
-    card.onclick = () => {
-      play(ch.url);
-    };
+    categories[group].forEach(ch => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.tabIndex = 0;
+      card.innerText = ch.name;
 
-    grid.appendChild(card);
+      card.onclick = () => play(ch);
+      card.onfocus = () => currentFocus = card;
+
+      items.appendChild(card);
+    });
+
+    row.appendChild(title);
+    row.appendChild(items);
+    ui.appendChild(row);
   });
 }
 
-// PLAY ENGINE
-function play(url) {
+// ===================== PLAY =====================
+function play(ch) {
+  console.log("Playing:", ch.name);
 
-  console.log("PLAY:", url);
+  ui.style.display = "none";
 
-  document.body.classList.add("fullscreen");
+  if (window.webapis && webapis.avplay) {
+    playAV(ch.url);
+  } else {
+    playHTML5(ch.url);
+  }
+}
 
-  // AVPlay for HLS
-  if (url.includes(".m3u8") && player) {
+// ===================== AVPLAY =====================
+function playAV(url) {
+  try {
+    webapis.avplay.close();
+  } catch (e) {}
 
-    try {
-      player.stop();
-      player.close();
-    } catch {}
+  webapis.avplay.open(url);
+  webapis.avplay.prepareAsync(() => {
+    webapis.avplay.play();
+  });
+}
 
-    try {
-      player.open(url);
-      player.setDisplayRect(0, 0, 1920, 1080);
+// ===================== HTML5 =====================
+function playHTML5(url) {
+  videoContainer.innerHTML = "";
 
-      player.prepareAsync(() => {
-        player.play();
-      });
+  const video = document.createElement("video");
+  video.src = url;
+  video.autoplay = true;
+  video.controls = true;
 
-      return;
+  video.style.width = "100%";
+  video.style.height = "100%";
 
-    } catch {
-      console.log("AVPlay failed");
-    }
+  video.onerror = () => {
+    alert("Stream not working");
+  };
+
+  videoContainer.appendChild(video);
+}
+
+// ===================== REMOTE =====================
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && currentFocus) {
+    currentFocus.click();
   }
 
-  // HTML5 fallback
-  video.src = url;
-  video.play().catch(() => {
-    alert("Stream not supported");
-  });
-}
+  if (e.key === "Escape") {
+    ui.style.display = "block";
+    videoContainer.innerHTML = "";
+  }
+});
+
+// ===================== INIT =====================
+loadChannels();
