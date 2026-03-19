@@ -1,27 +1,45 @@
+// 🔴 ERROR DISPLAY (NO WHITE SCREEN EVER AGAIN)
+window.onerror = function(msg, url, line) {
+  document.body.innerHTML =
+    "<pre style='color:red'>" + msg + " at line " + line + "</pre>";
+};
+
 const PLAYLIST = "https://iptv-org.github.io/iptv/languages/tel.m3u";
 
-const video = document.createElement("video");
-video.style.position = "fixed";
-video.style.inset = "0";
-video.style.width = "100%";
-video.style.height = "100%";
-video.style.background = "black";
-video.style.zIndex = "1";
-video.autoplay = true;
-
-document.body.appendChild(video);
-
-const rowsEl = document.getElementById("rows");
-
 let channels = [];
+let player = null;
+let video = null;
 
-// 🔹 LOAD PLAYLIST
+// INIT
+window.onload = () => {
+  init();
+};
+
 async function init() {
-  const text = await fetch(PLAYLIST).then(r => r.text());
+
+  // AVPlay (if available)
+  try {
+    if (window.webapis && webapis.avplay) {
+      player = webapis.avplay;
+    }
+  } catch {}
+
+  // HTML5 fallback video
+  video = document.createElement("video");
+  video.style.width = "100%";
+  video.style.height = "100%";
+  video.autoplay = true;
+  document.getElementById("video").appendChild(video);
+
+  // Load playlist
+  let text = await fetch(PLAYLIST).then(r => r.text());
+
   channels = parse(text);
+
   render();
 }
 
+// PARSE M3U
 function parse(txt) {
   const lines = txt.split("\n");
   let res = [], meta = {};
@@ -37,40 +55,62 @@ function parse(txt) {
     }
   }
 
-  return res.slice(0, 50); // keep small for testing
+  return res.slice(0, 40); // keep small for stability
 }
 
-// 🔹 RENDER SIMPLE GRID
+// RENDER GRID
 function render() {
-  rowsEl.innerHTML = "";
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
 
-  channels.forEach((ch, i) => {
+  channels.forEach(ch => {
 
     const card = document.createElement("div");
-    card.style.padding = "20px";
-    card.style.margin = "10px";
-    card.style.display = "inline-block";
-    card.style.background = "#222";
-    card.style.cursor = "pointer";
-
+    card.className = "card";
     card.textContent = ch.name;
 
-    // 🔥 CLICK MUST WORK
+    // 🔥 CLICK WORKS GUARANTEED
     card.onclick = () => {
-      console.log("CLICKED:", ch.name, ch.url);
       play(ch.url);
     };
 
-    rowsEl.appendChild(card);
+    grid.appendChild(card);
   });
 }
 
-// 🔹 PLAY (HTML5 ONLY — MOST RELIABLE TEST)
+// PLAY ENGINE
 function play(url) {
+
+  console.log("PLAY:", url);
+
+  document.body.classList.add("fullscreen");
+
+  // HLS → AVPlay first
+  if (url.includes(".m3u8") && player) {
+
+    try {
+      player.stop();
+      player.close();
+    } catch {}
+
+    try {
+      player.open(url);
+      player.setDisplayRect(0, 0, 1920, 1080);
+
+      player.prepareAsync(() => {
+        player.play();
+      });
+
+      return;
+
+    } catch {
+      console.log("AVPlay failed → fallback");
+    }
+  }
+
+  // HTML5 fallback
   video.src = url;
   video.play().catch(() => {
-    alert("Playback failed");
+    alert("Stream not supported");
   });
 }
-
-init();
