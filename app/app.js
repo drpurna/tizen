@@ -17,7 +17,7 @@ const cache = {};
 renderPlaylists();
 setTimeout(() => document.querySelector(".playlist-btn")?.click(), 300);
 
-/* PLAYLIST BAR */
+/* PLAYLIST UI */
 function renderPlaylists() {
   const bar = document.getElementById("playlistBar");
   bar.innerHTML = "";
@@ -55,6 +55,9 @@ async function loadPlaylist(p, btn) {
     const text = await res.text();
 
     channels = parseM3U(text);
+
+    console.log("Channels loaded:", channels.length);
+
     cache[p.url] = channels;
 
     finish();
@@ -64,7 +67,7 @@ async function loadPlaylist(p, btn) {
   }
 }
 
-/* PARSER */
+/* ✅ FIXED PARSER */
 function parseM3U(data) {
 
   const lines = data.split("\n");
@@ -85,7 +88,8 @@ function parseM3U(data) {
 
       ch.url = line.trim();
 
-      if (ch.url.includes(".m3u8")) {
+      // ✅ KEEP MOST STREAMS (ONLY SKIP DASH)
+      if (!ch.url.includes(".mpd")) {
         result.push(ch);
       }
 
@@ -93,7 +97,7 @@ function parseM3U(data) {
     }
   });
 
-  return result.slice(0, 500);
+  return result;
 }
 
 /* BUILD CATEGORY */
@@ -133,9 +137,9 @@ function render() {
     const items = document.createElement("div");
     items.className = "row-items";
 
-    categories[cat].forEach((ch, index) => {
+    categories[cat].forEach(ch => {
 
-      const globalIndex = flatChannels.indexOf(ch);
+      const index = flatChannels.indexOf(ch);
 
       const card = document.createElement("div");
       card.className = "card";
@@ -147,7 +151,7 @@ function render() {
 
       card.appendChild(img);
 
-      card.onclick = () => play(ch.url, globalIndex);
+      card.onclick = () => play(ch.url, index);
 
       items.appendChild(card);
     });
@@ -165,10 +169,12 @@ function finish() {
   loader.style.display = "none";
 }
 
-/* PLAY ENGINE WITH AUTO-SKIP */
+/* 🔥 FIXED PLAY ENGINE */
 function play(url, index = 0) {
 
   if (!url) return;
+
+  console.log("Playing:", url);
 
   player.style.display = "block";
   loader.style.display = "block";
@@ -184,11 +190,17 @@ function play(url, index = 0) {
     webapis.avplay.setListener({
 
       onbufferingstart: () => loader.style.display = "block",
-      onbufferingcomplete: () => loader.style.display = "none",
+
+      onbufferingcomplete: () => {
+        loader.style.display = "none";
+      },
 
       onstreamcompleted: () => playNext(index),
 
-      onerror: () => playNext(index)
+      onerror: () => {
+        console.log("Error → skip");
+        playNext(index);
+      }
 
     });
 
@@ -196,9 +208,10 @@ function play(url, index = 0) {
       webapis.avplay.play();
     });
 
-    // TIMEOUT FAIL SAFE
+    // ⏱ TIMEOUT FAILSAFE
     setTimeout(() => {
       if (loader.style.display === "block") {
+        console.log("Timeout → skip");
         playNext(index);
       }
     }, 8000);
@@ -221,10 +234,10 @@ function playNext(currentIndex) {
     }
   }
 
-  alert("No playable channels");
+  alert("No playable channels found");
 }
 
-/* REMOTE EXIT */
+/* EXIT PLAYER */
 document.addEventListener("keydown", e => {
 
   if (e.key === "Return") {
