@@ -19,6 +19,7 @@ const App = (() => {
     isFullscreen: false,
     prebufferIndex: null,
     overlayTimeout: null,
+    videoElement: null,          // will hold the dynamically created video
     dom: {
       rows: document.getElementById("rows"),
       overlay: document.getElementById("overlay"),
@@ -51,10 +52,18 @@ const App = (() => {
   };
 
   /* =========================
-     INIT – splash always hides (fixed)
+     INIT – splash always hides
   ========================== */
   async function init() {
     showSplash();
+
+    // Dynamically create video element inside #player (so index.html stays unchanged)
+    S.videoElement = document.createElement('video');
+    S.videoElement.id = 'av-player';
+    S.videoElement.style.width = '100%';
+    S.videoElement.style.height = '100%';
+    S.videoElement.style.backgroundColor = 'black';
+    S.dom.player.appendChild(S.videoElement);
 
     try {
       // Get AVPlay (may fail on emulator, but we'll log)
@@ -163,7 +172,7 @@ const App = (() => {
   }
 
   /* =========================
-     FOCUS & SCROLL – fixed for edge cases
+     FOCUS & SCROLL – fixed edge cases
   ========================== */
   function setFocus() {
     document.querySelectorAll(".card.active").forEach(e => e.classList.remove("active"));
@@ -187,7 +196,7 @@ const App = (() => {
     const totalItems = items.children.length;
 
     if (totalItems <= visible) {
-      scroll = 0; // no scroll needed
+      scroll = 0;
     } else {
       if (S.focusCol >= scroll + visible) {
         scroll = S.focusCol - visible + 1;
@@ -220,7 +229,7 @@ const App = (() => {
   }
 
   /* =========================
-     PLAYER (AVPlay) – full screen fixed, uses actual screen size
+     PLAYER (AVPlay) – full screen fixed
   ========================== */
   function play(index) {
     const ch = S.flat[index];
@@ -236,20 +245,18 @@ const App = (() => {
     try { S.player.stop(); S.player.close(); } catch(e) {}
 
     try {
-      // Bind to the video element we added in HTML
-      const videoElement = document.getElementById('av-player');
-      if (videoElement) {
-        S.player.setDisplay(videoElement);
+      // Bind the player to the dynamically created video element
+      if (S.videoElement) {
+        S.player.setDisplay(S.videoElement);
       }
 
-      // Use actual screen size (availWidth/Height avoids overscan)
+      // Use actual screen dimensions
       const screenWidth = window.screen.availWidth || window.screen.width;
       const screenHeight = window.screen.availHeight || window.screen.height;
 
       S.player.open(ch.url);
       S.player.setDisplayRect(0, 0, screenWidth, screenHeight);
 
-      // Optional: force full-screen mode on newer Tizen
       if (S.player.setDisplayMethod) {
         S.player.setDisplayMethod(webapis.avplay.AVPlayDisplayMode.PLAYER_DISPLAY_MODE_FULL_SCREEN);
       }
