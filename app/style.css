@@ -2,7 +2,7 @@ body {
   margin: 0;
   background: black;
   color: white;
-  font-family: Impact, "Arial Narrow", Arial, sans-serif;
+  font-family: Impact, Arial, sans-serif;
   overflow: hidden;
 }
 
@@ -35,6 +35,25 @@ body {
 .logo {
   font-size: 42px;
   font-weight: 900;
+}
+
+.actions {
+  position: absolute;
+  right: 60px;
+  top: 30px;
+  display: flex;
+  gap: 15px;
+}
+
+.action-btn {
+  background: red;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.settings {
+  background: #333;
 }
 
 /* GRID */
@@ -93,7 +112,6 @@ body {
   border-radius: 8px;
   opacity: 0;
   transition: opacity 0.3s;
-  z-index: 10;
 }
 
 /* LOADER */
@@ -105,7 +123,39 @@ body {
   background: rgba(0,0,0,0.7);
   padding: 15px 25px;
   border-radius: 10px;
-  font-size: 24px;
   display: none;
-  z-index: 20;
+}
+
+/* SETTINGS PANEL */
+#settingsPanel {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+#settingsPanel.active {
+  display: flex;
+}
+
+.settings-box {
+  width: 800px;
+  background: #111;
+  padding: 30px;
+  border-radius: 12px;
+}
+
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  border-bottom: 1px solid #333;
+}
+
+.settings-item button {
+  background: red;
+  border: none;
+  padding: 6px 12px;
 }
