@@ -1,11 +1,4 @@
-let channels = [
-  {
-    name: "Test Stream",
-    group: "Live",
-    url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
-  }
-];
-
+let channels = [];
 let categories = {};
 let currentFocus = null;
 
@@ -15,38 +8,30 @@ const ui = document.getElementById("ui");
 const overlay = document.getElementById("overlay");
 const loader = document.getElementById("loader");
 
+// STORAGE
+function getPlaylists() {
+  return JSON.parse(localStorage.getItem("playlists") || "[]");
+}
+
+function savePlaylists(p) {
+  localStorage.setItem("playlists", JSON.stringify(p));
+}
+
 // LOAD CHANNELS
 async function loadChannels() {
 
   try {
     const res = await fetch("https://iptv-org.github.io/iptv/languages/tel.m3u");
-
-    if (res.ok) {
-      const text = await res.text();
-      const parsed = parseM3U(text);
-      if (parsed.length) channels = parsed;
-    }
-
-  } catch (e) {
-    console.log("Using fallback channels");
-  }
+    const text = await res.text();
+    channels = parseM3U(text);
+  } catch {}
 
   buildCategories();
   render();
-
-  // RESUME
-  const last = localStorage.getItem("last_channel");
-  if (last) {
-    try {
-      const ch = JSON.parse(last);
-      setTimeout(() => play(ch), 1500);
-    } catch {}
-  }
 }
 
 // PARSE
 function parseM3U(text) {
-
   const lines = text.split("\n");
   const result = [];
 
@@ -55,7 +40,6 @@ function parseM3U(text) {
   for (let line of lines) {
 
     if (line.startsWith("#EXTINF")) {
-
       name = line.split(",").pop();
 
       const g = line.match(/group-title="(.*?)"/);
@@ -77,10 +61,12 @@ function parseM3U(text) {
 function buildCategories() {
 
   categories = {
+    Devotional: [],
     News: [],
     Movies: [],
     Sports: [],
     Entertainment: [],
+    "My Channels": [],
     Others: []
   };
 
@@ -88,13 +74,17 @@ function buildCategories() {
 
     const n = ch.name.toLowerCase();
 
-    if (n.includes("news")) categories.News.push(ch);
+    if (n.includes("bhakti") || n.includes("devotional")) categories.Devotional.push(ch);
+    else if (n.includes("news")) categories.News.push(ch);
     else if (n.includes("movie")) categories.Movies.push(ch);
     else if (n.includes("sport")) categories.Sports.push(ch);
     else if (n.includes("tv")) categories.Entertainment.push(ch);
     else categories.Others.push(ch);
-
   });
+
+  let manual = [];
+  getPlaylists().forEach(p => manual = manual.concat(p.channels));
+  categories["My Channels"] = manual;
 }
 
 // RENDER
@@ -135,7 +125,7 @@ function render() {
 
       card.addEventListener("focus", () => {
         currentFocus = card;
-        card.scrollIntoView({ behavior:"smooth", inline:"center", block:"nearest" });
+        card.scrollIntoView({ behavior:"smooth", inline:"center" });
       });
 
       items.appendChild(card);
@@ -146,13 +136,11 @@ function render() {
     grid.appendChild(row);
   });
 
-  setTimeout(() => document.querySelector(".card")?.focus(), 200);
+  setTimeout(()=>document.querySelector(".card")?.focus(),200);
 }
 
 // PLAY
 function play(ch) {
-
-  localStorage.setItem("last_channel", JSON.stringify(ch));
 
   overlay.innerText = ch.name;
   overlay.style.opacity = 1;
@@ -161,45 +149,106 @@ function play(ch) {
   ui.style.display = "none";
   loader.style.display = "block";
 
-  playHTML5(ch.url);
-}
-
-// HTML5 PLAYER
-function playHTML5(url) {
-
   videoContainer.innerHTML = "";
 
   const video = document.createElement("video");
-  video.src = url;
+  video.src = ch.url;
   video.autoplay = true;
   video.controls = true;
 
   video.style.width = "100%";
   video.style.height = "100%";
 
-  video.addEventListener("playing", () => {
-    loader.style.display = "none";
-  });
-
-  video.onerror = () => {
-    loader.style.display = "none";
-    alert("Stream failed");
-  };
+  video.onplaying = () => loader.style.display = "none";
+  video.onerror = () => loader.style.display = "none";
 
   videoContainer.appendChild(video);
+}
+
+// ADD PLAYLIST
+document.getElementById("addPlaylistBtn").onclick = addPlaylist;
+
+function addPlaylist() {
+
+  const url = prompt("Enter M3U URL");
+  if (!url) return;
+
+  loader.style.display = "block";
+
+  fetch(url)
+    .then(r => r.text())
+    .then(text => {
+
+      const parsed = parseM3U(text);
+
+      let p = getPlaylists();
+      p.push({ name: url, url, channels: parsed });
+
+      savePlaylists(p);
+
+      loader.style.display = "none";
+
+      buildCategories();
+      render();
+    })
+    .catch(()=> loader.style.display="none");
+}
+
+// SETTINGS
+const settingsBtn = document.getElementById("settingsBtn");
+const settingsPanel = document.getElementById("settingsPanel");
+const playlistList = document.getElementById("playlistList");
+
+settingsBtn.onclick = openSettings;
+
+function openSettings() {
+
+  settingsPanel.classList.add("active");
+
+  const playlists = getPlaylists();
+  playlistList.innerHTML = "";
+
+  playlists.forEach((p,i)=>{
+
+    const item = document.createElement("div");
+    item.className = "settings-item";
+
+    item.innerHTML = `<span>${p.name}</span>
+      <button onclick="removePlaylist(${i})">Remove</button>`;
+
+    playlistList.appendChild(item);
+  });
+}
+
+function removePlaylist(i) {
+  let p = getPlaylists();
+  p.splice(i,1);
+  savePlaylists(p);
+  openSettings();
+  buildCategories();
+  render();
 }
 
 // REMOTE
 document.addEventListener("keydown", e => {
 
+  if (settingsPanel.classList.contains("active")) {
+    if (e.key==="Return"||e.key==="Escape") {
+      settingsPanel.classList.remove("active");
+    }
+    return;
+  }
+
   const f = document.activeElement;
 
-  if (e.key === "Enter" && currentFocus) currentFocus.click();
+  if (e.key==="Enter" && currentFocus) currentFocus.click();
 
-  if (e.key === "Escape" || e.key === "Return") {
-    ui.style.display = "block";
-    videoContainer.innerHTML = "";
+  if (e.key==="Escape"||e.key==="Return") {
+    ui.style.display="block";
+    videoContainer.innerHTML="";
   }
+
+  if (e.key==="ColorF0Red") addPlaylist();
 
   if (!f.classList.contains("card")) return;
 
