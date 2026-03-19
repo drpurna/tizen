@@ -1,26 +1,35 @@
-// ===== ELEMENTS =====
 const grid = document.getElementById("grid");
 const loader = document.getElementById("loader");
 const player = document.getElementById("playerContainer");
 
-// ===== STATE =====
 let channels = [];
 let categories = {};
 let flatChannels = [];
-let indexMap = new Map(); // fast index lookup
+let indexMap = new Map();
 
 const PLAYLISTS = [
   { name: "Telugu", url: "https://iptv-org.github.io/iptv/languages/tel.m3u" },
   { name: "India", url: "https://iptv-org.github.io/iptv/countries/in.m3u" }
 ];
 
+const categoryOrder = [
+  "News",
+  "Entertainment",
+  "Movies",
+  "Sports",
+  "Devotional",
+  "Kids",
+  "Music",
+  "Other"
+];
+
 const cache = {};
 
-// ===== INIT =====
+/* INIT */
 renderPlaylists();
 setTimeout(() => document.querySelector(".playlist-btn")?.click(), 300);
 
-// ===== PLAYLIST UI =====
+/* PLAYLIST BAR */
 function renderPlaylists() {
   const bar = document.getElementById("playlistBar");
   bar.innerHTML = "";
@@ -37,7 +46,7 @@ function renderPlaylists() {
   });
 }
 
-// ===== LOAD PLAYLIST =====
+/* LOAD PLAYLIST */
 async function loadPlaylist(p, btn) {
 
   loader.style.display = "block";
@@ -59,8 +68,6 @@ async function loadPlaylist(p, btn) {
 
     channels = parseM3U(text);
 
-    console.log("Channels loaded:", channels.length);
-
     cache[p.url] = channels;
 
     finish();
@@ -70,7 +77,7 @@ async function loadPlaylist(p, btn) {
   }
 }
 
-// ===== FAST PARSER (NO FILTER) =====
+/* PARSER (NO FILTER) */
 function parseM3U(data) {
 
   const lines = data.split("\n");
@@ -106,7 +113,7 @@ function parseM3U(data) {
   return result;
 }
 
-// ===== BUILD CATEGORY (FAST + INDEX MAP) =====
+/* CLEAN CATEGORY SYSTEM */
 function buildCategories() {
 
   categories = {};
@@ -116,12 +123,16 @@ function buildCategories() {
   for (let i = 0; i < channels.length; i++) {
 
     const ch = channels[i];
+    let cat = (ch.group || "").toLowerCase();
 
-    let cat = ch.group || "Other";
-
-    if (cat.toLowerCase().includes("religion")) {
-      cat = "Devotional";
-    }
+    if (cat.includes("news")) cat = "News";
+    else if (cat.includes("movie")) cat = "Movies";
+    else if (cat.includes("sport")) cat = "Sports";
+    else if (cat.includes("music")) cat = "Music";
+    else if (cat.includes("kid") || cat.includes("cartoon")) cat = "Kids";
+    else if (cat.includes("religion")) cat = "Devotional";
+    else if (cat.includes("tv") || cat.includes("entertainment")) cat = "Entertainment";
+    else cat = "Other";
 
     if (!categories[cat]) categories[cat] = [];
 
@@ -132,14 +143,15 @@ function buildCategories() {
   }
 }
 
-// ===== RENDER (OPTIMIZED) =====
+/* RENDER */
 function render() {
 
   grid.innerHTML = "";
-
   const fragment = document.createDocumentFragment();
 
-  Object.keys(categories).forEach(cat => {
+  categoryOrder.forEach(cat => {
+
+    if (!categories[cat]) return;
 
     const row = document.createElement("div");
     row.className = "row";
@@ -151,7 +163,6 @@ function render() {
     const items = document.createElement("div");
     items.className = "row-items";
 
-    // 🚀 LIMIT PER ROW FOR PERFORMANCE
     const list = categories[cat].slice(0, 80);
 
     list.forEach(ch => {
@@ -182,19 +193,17 @@ function render() {
   grid.appendChild(fragment);
 }
 
-// ===== FINISH =====
+/* FINISH */
 function finish() {
   buildCategories();
   render();
   loader.style.display = "none";
 }
 
-// ===== PLAY ENGINE (FAST + STABLE) =====
+/* PLAY ENGINE */
 function play(url, index = 0) {
 
   if (!url) return;
-
-  console.log("Play:", url);
 
   player.style.display = "block";
   loader.style.display = "block";
@@ -208,24 +217,16 @@ function play(url, index = 0) {
     webapis.avplay.open(url);
 
     webapis.avplay.setListener({
-
       onbufferingstart: () => loader.style.display = "block",
-
-      onbufferingcomplete: () => {
-        loader.style.display = "none";
-      },
-
+      onbufferingcomplete: () => loader.style.display = "none",
       onstreamcompleted: () => playNext(index),
-
       onerror: () => playNext(index)
-
     });
 
     webapis.avplay.prepareAsync(() => {
       webapis.avplay.play();
     });
 
-    // ⚡ FAST FAIL → QUICK SKIP
     setTimeout(() => {
       if (loader.style.display === "block") {
         playNext(index);
@@ -237,7 +238,7 @@ function play(url, index = 0) {
   }
 }
 
-// ===== AUTO SKIP (FAST LOOP) =====
+/* AUTO SKIP */
 function playNext(currentIndex) {
 
   for (let i = currentIndex + 1; i < flatChannels.length; i++) {
@@ -253,7 +254,7 @@ function playNext(currentIndex) {
   alert("No playable channels");
 }
 
-// ===== REMOTE EXIT =====
+/* EXIT */
 document.addEventListener("keydown", e => {
 
   if (e.key === "Return") {
@@ -263,6 +264,5 @@ document.addEventListener("keydown", e => {
     try {
       webapis.avplay.stop();
     } catch(e) {}
-
   }
 });
