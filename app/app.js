@@ -1,14 +1,8 @@
-// ===== GLOBAL =====
 let channels = [
   {
-    name: "Test Stream 1",
+    name: "Test Stream",
     group: "Live",
     url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
-  },
-  {
-    name: "Test Stream 2",
-    group: "Live",
-    url: "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8"
   }
 ];
 
@@ -16,78 +10,101 @@ let categories = {};
 let currentFocus = null;
 
 const videoContainer = document.getElementById("video");
+const grid = document.getElementById("grid");
 const ui = document.getElementById("ui");
 const overlay = document.getElementById("overlay");
+const loader = document.getElementById("loader");
 
-// ===== LOAD (SAFE) =====
+// LOAD CHANNELS
 async function loadChannels() {
 
-  ui.innerHTML = "Loading channels...";
-
   try {
-    const res = await fetch(
-      "https://iptv-org.github.io/iptv/languages/tel.m3u"
-    );
+    const res = await fetch("https://iptv-org.github.io/iptv/languages/tel.m3u");
 
     if (res.ok) {
       const text = await res.text();
       const parsed = parseM3U(text);
-
-      if (parsed.length > 0) {
-        channels = parsed;
-      }
+      if (parsed.length) channels = parsed;
     }
 
   } catch (e) {
-    console.log("Fetch blocked → using test channels");
+    console.log("Using fallback channels");
   }
 
   buildCategories();
   render();
+
+  // RESUME
+  const last = localStorage.getItem("last_channel");
+  if (last) {
+    try {
+      const ch = JSON.parse(last);
+      setTimeout(() => play(ch), 1500);
+    } catch {}
+  }
 }
 
-// ===== PARSE =====
+// PARSE
 function parseM3U(text) {
+
   const lines = text.split("\n");
   const result = [];
 
-  let name = "", group = "Other";
+  let name="", group="Other", logo="";
 
   for (let line of lines) {
 
     if (line.startsWith("#EXTINF")) {
+
       name = line.split(",").pop();
 
       const g = line.match(/group-title="(.*?)"/);
       group = g ? g[1] : "Other";
+
+      const l = line.match(/tvg-logo="(.*?)"/);
+      logo = l ? l[1] : "";
     }
 
     else if (line.startsWith("http")) {
-      result.push({ name, group, url: line.trim() });
+      result.push({ name, group, logo, url: line.trim() });
     }
   }
 
-  return result.slice(0, 100);
+  return result.slice(0,200);
 }
 
-// ===== CATEGORY =====
+// CATEGORY
 function buildCategories() {
-  categories = {};
+
+  categories = {
+    News: [],
+    Movies: [],
+    Sports: [],
+    Entertainment: [],
+    Others: []
+  };
 
   channels.forEach(ch => {
-    if (!categories[ch.group]) {
-      categories[ch.group] = [];
-    }
-    categories[ch.group].push(ch);
+
+    const n = ch.name.toLowerCase();
+
+    if (n.includes("news")) categories.News.push(ch);
+    else if (n.includes("movie")) categories.Movies.push(ch);
+    else if (n.includes("sport")) categories.Sports.push(ch);
+    else if (n.includes("tv")) categories.Entertainment.push(ch);
+    else categories.Others.push(ch);
+
   });
 }
 
-// ===== RENDER =====
+// RENDER
 function render() {
 
-  ui.innerHTML = "";
+  grid.innerHTML = "";
 
   Object.keys(categories).forEach(group => {
+
+    if (!categories[group].length) return;
 
     const row = document.createElement("div");
     row.className = "row";
@@ -104,15 +121,21 @@ function render() {
       const card = document.createElement("div");
       card.className = "card";
       card.tabIndex = 0;
-      card.innerText = ch.name;
 
-      // 🔥 CLICK FIX (CRITICAL)
-      card.addEventListener("click", function () {
-        play(ch);
-      });
+      if (ch.logo) {
+        const img = document.createElement("img");
+        img.src = ch.logo;
+        img.onerror = () => card.innerText = ch.name;
+        card.appendChild(img);
+      } else {
+        card.innerText = ch.name;
+      }
 
-      card.addEventListener("focus", function () {
+      card.onclick = () => play(ch);
+
+      card.addEventListener("focus", () => {
         currentFocus = card;
+        card.scrollIntoView({ behavior:"smooth", inline:"center", block:"nearest" });
       });
 
       items.appendChild(card);
@@ -120,104 +143,76 @@ function render() {
 
     row.appendChild(title);
     row.appendChild(items);
-    ui.appendChild(row);
+    grid.appendChild(row);
   });
 
-  setTimeout(() => {
-    document.querySelector(".card")?.focus();
-  }, 200);
+  setTimeout(() => document.querySelector(".card")?.focus(), 200);
 }
 
-// ===== PLAY (FINAL FIX) =====
+// PLAY
 function play(ch) {
 
-  console.log("PLAY:", ch.name);
+  localStorage.setItem("last_channel", JSON.stringify(ch));
 
   overlay.innerText = ch.name;
   overlay.style.opacity = 1;
-  setTimeout(() => overlay.style.opacity = 0, 3000);
+  setTimeout(()=>overlay.style.opacity=0,3000);
 
   ui.style.display = "none";
+  loader.style.display = "block";
 
-  // ✅ ALWAYS PLAY HTML5 FIRST (GUARANTEED)
   playHTML5(ch.url);
-
-  // OPTIONAL AVPLAY (NON-BLOCKING)
-  if (window.webapis && webapis.avplay) {
-    try {
-      setTimeout(() => {
-        webapis.avplay.stop();
-        webapis.avplay.close();
-        webapis.avplay.open(ch.url);
-        webapis.avplay.prepareAsync(() => {
-          webapis.avplay.play();
-        });
-      }, 2000);
-    } catch (e) {}
-  }
 }
 
-// ===== HTML5 PLAYER =====
+// HTML5 PLAYER
 function playHTML5(url) {
 
   videoContainer.innerHTML = "";
 
   const video = document.createElement("video");
-
   video.src = url;
   video.autoplay = true;
   video.controls = true;
-  video.playsInline = true;
 
   video.style.width = "100%";
   video.style.height = "100%";
 
-  video.addEventListener("loadedmetadata", () => {
-    video.play().catch(() => {});
+  video.addEventListener("playing", () => {
+    loader.style.display = "none";
   });
 
   video.onerror = () => {
+    loader.style.display = "none";
     alert("Stream failed");
   };
 
   videoContainer.appendChild(video);
 }
 
-// ===== REMOTE =====
+// REMOTE
 document.addEventListener("keydown", e => {
 
-  const focus = document.activeElement;
+  const f = document.activeElement;
 
-  if (e.key === "Enter" && currentFocus) {
-    currentFocus.click();
-  }
+  if (e.key === "Enter" && currentFocus) currentFocus.click();
 
-  if (e.key === "Escape") {
+  if (e.key === "Escape" || e.key === "Return") {
     ui.style.display = "block";
     videoContainer.innerHTML = "";
   }
 
-  if (!focus.classList.contains("card")) return;
+  if (!f.classList.contains("card")) return;
 
-  if (e.key === "ArrowRight") {
-    focus.nextElementSibling?.focus();
-  }
+  if (e.key==="ArrowRight") f.nextElementSibling?.focus();
+  if (e.key==="ArrowLeft") f.previousElementSibling?.focus();
 
-  if (e.key === "ArrowLeft") {
-    focus.previousElementSibling?.focus();
-  }
+  if (e.key==="ArrowDown")
+    f.closest(".row")?.nextElementSibling?.querySelector(".card")?.focus();
 
-  if (e.key === "ArrowDown") {
-    focus.closest(".row")?.nextElementSibling
-      ?.querySelector(".card")?.focus();
-  }
-
-  if (e.key === "ArrowUp") {
-    focus.closest(".row")?.previousElementSibling
-      ?.querySelector(".card")?.focus();
-  }
+  if (e.key==="ArrowUp")
+    f.closest(".row")?.previousElementSibling?.querySelector(".card")?.focus();
 
 });
 
-// ===== INIT =====
+// INIT
 loadChannels();
