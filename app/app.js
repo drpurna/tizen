@@ -1,4 +1,19 @@
-let channels = [];
+// ================= GLOBAL =================
+let channels = [
+  {
+    name: "Test Stream 1",
+    group: "Live",
+    url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    logo: ""
+  },
+  {
+    name: "Test Stream 2",
+    group: "Live",
+    url: "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8",
+    logo: ""
+  }
+];
+
 let categories = {};
 let currentFocus = null;
 
@@ -8,32 +23,29 @@ const overlay = document.getElementById("overlay");
 
 // ================= LOAD =================
 async function loadChannels() {
+
   ui.innerHTML = "Loading channels...";
 
   let text = "";
 
   try {
     const res = await fetch(
-      "https://corsproxy.io/?https://iptv-org.github.io/iptv/languages/tel.m3u"
+      "https://iptv-org.github.io/iptv/languages/tel.m3u"
     );
-    text = await res.text();
+
+    if (res.ok) {
+      text = await res.text();
+    }
+
   } catch (e) {
-    console.log("Fetch failed");
+    console.log("Fetch failed → using fallback");
   }
 
   if (text) {
-    channels = parseM3U(text);
-  }
-
-  if (!channels.length) {
-    channels = [
-      {
-        name: "Test Stream",
-        group: "Test",
-        url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-        logo: ""
-      }
-    ];
+    const parsed = parseM3U(text);
+    if (parsed.length > 0) {
+      channels = parsed;
+    }
   }
 
   buildCategories();
@@ -43,11 +55,12 @@ async function loadChannels() {
 // ================= PARSE =================
 function parseM3U(text) {
   const lines = text.split("\n");
-  const res = [];
+  const result = [];
 
   let name = "", group = "Other", logo = "";
 
   for (let line of lines) {
+
     if (line.startsWith("#EXTINF")) {
 
       name = line.split(",").pop();
@@ -58,12 +71,14 @@ function parseM3U(text) {
       const l = line.match(/tvg-logo="(.*?)"/);
       logo = l ? l[1] : "";
 
-    } else if (line.startsWith("http")) {
-      res.push({ name, group, url: line.trim(), logo });
+    }
+
+    else if (line.startsWith("http")) {
+      result.push({ name, group, url: line.trim(), logo });
     }
   }
 
-  return res.slice(0, 120);
+  return result.slice(0, 120);
 }
 
 // ================= CATEGORY =================
@@ -80,88 +95,81 @@ function buildCategories() {
 
 // ================= RENDER =================
 function render() {
+
   ui.innerHTML = "";
 
-  Object.keys(categories)
-    .sort((a, b) => a.localeCompare(b))
-    .forEach(group => {
+  Object.keys(categories).forEach(group => {
 
-      const row = document.createElement("div");
-      row.className = "row";
+    const row = document.createElement("div");
+    row.className = "row";
 
-      const title = document.createElement("div");
-      title.className = "row-title";
-      title.innerText = group;
+    const title = document.createElement("div");
+    title.className = "row-title";
+    title.innerText = group;
 
-      const items = document.createElement("div");
-      items.className = "row-items";
+    const items = document.createElement("div");
+    items.className = "row-items";
 
-      categories[group].forEach(ch => {
+    categories[group].forEach(ch => {
 
-        const card = document.createElement("div");
-        card.className = "card";
-        card.tabIndex = 0;
+      const card = document.createElement("div");
+      card.className = "card";
+      card.tabIndex = 0;
 
-        if (ch.logo) {
-          const img = document.createElement("img");
-          img.src = ch.logo;
-          card.appendChild(img);
-        } else {
-          card.innerText = ch.name;
-        }
+      if (ch.logo) {
+        const img = document.createElement("img");
+        img.src = ch.logo;
+        card.appendChild(img);
+      } else {
+        card.innerText = ch.name;
+      }
 
-        card.onclick = () => play(ch);
-        card.onfocus = () => currentFocus = card;
+      card.addEventListener("click", () => play(ch));
+      card.addEventListener("focus", () => currentFocus = card);
 
-        items.appendChild(card);
-      });
-
-      row.appendChild(title);
-      row.appendChild(items);
-      ui.appendChild(row);
+      items.appendChild(card);
     });
+
+    row.appendChild(title);
+    row.appendChild(items);
+    ui.appendChild(row);
+  });
 
   setTimeout(() => {
     const first = document.querySelector(".card");
     if (first) first.focus();
-  }, 300);
+  }, 200);
 }
 
 // ================= PLAY =================
 function play(ch) {
+
   overlay.innerText = ch.name;
   overlay.style.opacity = 1;
-
   setTimeout(() => overlay.style.opacity = 0, 3000);
 
   ui.style.display = "none";
 
   if (window.webapis && webapis.avplay) {
-    playAV(ch.url);
-  } else {
-    playHTML5(ch.url);
+    try {
+      webapis.avplay.stop();
+      webapis.avplay.close();
+      webapis.avplay.open(ch.url);
+      webapis.avplay.prepareAsync(() => {
+        webapis.avplay.play();
+      });
+      return;
+    } catch (e) {
+      console.log("AVPlay failed → fallback");
+    }
   }
-}
 
-// ================= AVPLAY =================
-function playAV(url) {
-  try {
-    webapis.avplay.stop();
-    webapis.avplay.close();
-  } catch (e) {}
-
-  try {
-    webapis.avplay.open(url);
-    webapis.avplay.prepareAsync(() => {
-      webapis.avplay.play();
-    });
-  } catch (e) {
-    playHTML5(url);
-  }
+  playHTML5(ch.url);
 }
 
 // ================= HTML5 =================
 function playHTML5(url) {
+
   videoContainer.innerHTML = "";
 
   const video = document.createElement("video");
@@ -172,7 +180,7 @@ function playHTML5(url) {
   video.style.width = "100%";
   video.style.height = "100%";
 
-  video.onerror = () => alert("Stream not supported");
+  video.onerror = () => alert("Channel not working");
 
   videoContainer.appendChild(video);
 }
@@ -212,6 +220,6 @@ document.addEventListener("keydown", e => {
   }
 
 });
-  
+
 // ================= INIT =================
 loadChannels();
