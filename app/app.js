@@ -1,5 +1,5 @@
 /* =========================
-   IPTV ENGINE v6 – FULL UPGRADED (FIXED)
+   IPTV ENGINE v6 – BUG FIXES ONLY (UI unchanged)
 ========================= */
 
 const App = (() => {
@@ -51,13 +51,13 @@ const App = (() => {
   };
 
   /* =========================
-     INIT – with splash fix
+     INIT – splash always hides (fixed)
   ========================== */
   async function init() {
     showSplash();
 
     try {
-      // Try to get AVPlay – it's okay if it's not available (maybe fallback to HTML5 later)
+      // Get AVPlay (may fail on emulator, but we'll log)
       try { S.player = webapis.avplay; } catch(e){ console.warn("AVPlay not available", e); }
 
       const text = await fetch(CONFIG.PLAYLIST).then(r => r.text());
@@ -70,10 +70,9 @@ const App = (() => {
       S.dom.overlay.textContent = "Failed to load playlist";
       S.dom.overlay.style.opacity = 1;
     } finally {
-      hideSplash(); // Always hide splash, even after error
+      hideSplash(); // Always hide splash, even on error
     }
 
-    // Add remote icons functionality
     S.dom.searchBtn.addEventListener("click", searchPrompt);
     S.dom.addBtn.addEventListener("click", loadPlaylistPrompt);
   }
@@ -94,7 +93,7 @@ const App = (() => {
   }
 
   /* =========================
-     PARSE PLAYLIST
+     PARSE PLAYLIST (unchanged)
   ========================== */
   function parse(text) {
     const lines = text.split("\n");
@@ -115,7 +114,7 @@ const App = (() => {
   }
 
   /* =========================
-     BUILD ROWS
+     BUILD ROWS (unchanged)
   ========================== */
   function buildRows() {
     const map = {};
@@ -129,7 +128,7 @@ const App = (() => {
   }
 
   /* =========================
-     RENDER ROWS
+     RENDER ROWS (unchanged)
   ========================== */
   function renderRows() {
     const frag = document.createDocumentFragment();
@@ -164,7 +163,7 @@ const App = (() => {
   }
 
   /* =========================
-     FOCUS & SCROLL (fixed)
+     FOCUS & SCROLL – fixed for edge cases
   ========================== */
   function setFocus() {
     document.querySelectorAll(".card.active").forEach(e => e.classList.remove("active"));
@@ -188,7 +187,7 @@ const App = (() => {
     const totalItems = items.children.length;
 
     if (totalItems <= visible) {
-      scroll = 0; // No scrolling needed
+      scroll = 0; // no scroll needed
     } else {
       if (S.focusCol >= scroll + visible) {
         scroll = S.focusCol - visible + 1;
@@ -196,7 +195,6 @@ const App = (() => {
       if (S.focusCol < scroll) {
         scroll = S.focusCol;
       }
-      // Ensure scroll doesn't go beyond the last possible position
       const maxScroll = totalItems - visible;
       if (scroll > maxScroll) scroll = maxScroll;
     }
@@ -222,7 +220,7 @@ const App = (() => {
   }
 
   /* =========================
-     PLAYER (AVPlay) – fixed fullscreen & video element
+     PLAYER (AVPlay) – full screen fixed, uses actual screen size
   ========================== */
   function play(index) {
     const ch = S.flat[index];
@@ -238,23 +236,20 @@ const App = (() => {
     try { S.player.stop(); S.player.close(); } catch(e) {}
 
     try {
-      // Attach the player to the video element (essential!)
+      // Bind to the video element we added in HTML
       const videoElement = document.getElementById('av-player');
       if (videoElement) {
         S.player.setDisplay(videoElement);
-      } else {
-        console.warn("Video element #av-player not found");
       }
 
-      // Get actual screen dimensions (avoid overscan with availWidth/Height)
+      // Use actual screen size (availWidth/Height avoids overscan)
       const screenWidth = window.screen.availWidth || window.screen.width;
       const screenHeight = window.screen.availHeight || window.screen.height;
-      console.log(`Setting display rect to 0,0,${screenWidth},${screenHeight}`);
 
       S.player.open(ch.url);
       S.player.setDisplayRect(0, 0, screenWidth, screenHeight);
 
-      // Force full-screen mode on newer Tizen
+      // Optional: force full-screen mode on newer Tizen
       if (S.player.setDisplayMethod) {
         S.player.setDisplayMethod(webapis.avplay.AVPlayDisplayMode.PLAYER_DISPLAY_MODE_FULL_SCREEN);
       }
@@ -265,15 +260,11 @@ const App = (() => {
           console.log("AVPlay prepared, starting playback");
           S.player.play();
         },
-        (error) => {
-          console.error("AVPlay prepare error:", error);
-          // If AVPlay fails, you could try a fallback (e.g., HTML5 video) here
-        }
+        (error) => console.error("AVPlay prepare error:", error)
       );
       prebufferNext(index);
     } catch(e) {
       console.error("AVPlay play error:", e);
-      // Restore UI on error
       S.isFullscreen = false;
       S.dom.ui.style.display = "block";
     }
@@ -293,7 +284,6 @@ const App = (() => {
         if(S.prebufferIndex !== nextIndex){
           const pb = webapis.avplay;
           pb.open(nextCh.url);
-          // Off-screen rectangle (small and negative) – can also use dynamic dimensions
           pb.setDisplayRect(-screen.width, -screen.height, 1, 1);
           pb.prepareAsync(()=>{}, ()=>{});
           S.prebufferIndex = nextIndex;
@@ -303,7 +293,7 @@ const App = (() => {
   }
 
   /* =========================
-     REMOTE + NAVIGATION
+     REMOTE + NAVIGATION (unchanged)
   ========================== */
   function zap(dir) {
     let i = S.currentIndex + dir;
@@ -347,7 +337,7 @@ const App = (() => {
   }
 
   /* =========================
-     HELPERS
+     HELPERS (unchanged)
   ========================== */
   function div(cls, txt) {
     const d = document.createElement("div");
