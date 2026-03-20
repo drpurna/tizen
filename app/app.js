@@ -1,267 +1,311 @@
+const playlistUrlEl = document.getElementById('playlistUrl');
+const loadBtn = document.getElementById('loadBtn');
+const searchInput = document.getElementById('searchInput');
+const channelListEl = document.getElementById('channelList');
+const nowPlayingEl = document.getElementById('nowPlaying');
+const statusTextEl = document.getElementById('statusText');
+const video = document.getElementById('video');
+
 let channels = [];
-let categories = {};
-let currentFocus = null;
+let filtered = [];
+let selectedIndex = 0;
+let focusArea = 'list'; // list | player | controls
+let hls = null;
 
-const videoContainer = document.getElementById("video");
-const grid = document.getElementById("grid");
-const ui = document.getElementById("ui");
-const overlay = document.getElementById("overlay");
-const loader = document.getElementById("loader");
+const DEFAULT_PLAYLIST = localStorage.getItem('misoIptv:lastPlaylist') || 'https://raw.githubusercontent.com/thichcode/thichcode/refs/heads/main/fptplay.m3u';
+playlistUrlEl.value = DEFAULT_PLAYLIST;
 
-// STORAGE
-function getPlaylists() {
-  return JSON.parse(localStorage.getItem("playlists") || "[]");
+function setStatus(text) {
+  statusTextEl.textContent = text;
 }
 
-function savePlaylists(p) {
-  localStorage.setItem("playlists", JSON.stringify(p));
-}
-
-// LOAD CHANNELS
-async function loadChannels() {
-
-  try {
-    const res = await fetch("https://iptv-org.github.io/iptv/languages/tel.m3u");
-    const text = await res.text();
-    channels = parseM3U(text);
-  } catch {}
-
-  buildCategories();
-  render();
-}
-
-// PARSE
 function parseM3U(text) {
-  const lines = text.split("\n");
-  const result = [];
+  const lines = text.split(/\r?\n/);
+  const out = [];
+  let currentMeta = null;
 
-  let name="", group="Other", logo="";
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
 
-  for (let line of lines) {
-
-    if (line.startsWith("#EXTINF")) {
-      name = line.split(",").pop();
-
-      const g = line.match(/group-title="(.*?)"/);
-      group = g ? g[1] : "Other";
-
-      const l = line.match(/tvg-logo="(.*?)"/);
-      logo = l ? l[1] : "";
+    if (line.startsWith('#EXTINF')) {
+      // Example: #EXTINF:-1 tvg-name="ABC" group-title="News",ABC Channel
+      const namePart = line.includes(',') ? line.split(',').slice(1).join(',').trim() : 'Unknown';
+      const groupMatch = line.match(/group-title="([^"]+)"/i);
+      currentMeta = {
+        name: namePart || 'Unknown',
+        group: groupMatch ? groupMatch[1] : 'Other',
+      };
+      continue;
     }
 
-    else if (line.startsWith("http")) {
-      result.push({ name, group, logo, url: line.trim() });
+    if (!line.startsWith('#')) {
+      const item = {
+        name: currentMeta?.name || line,
+        group: currentMeta?.group || 'Other',
+        url: line,
+      };
+      out.push(item);
+      currentMeta = null;
     }
   }
 
-  return result.slice(0,200);
+  return out;
 }
 
-// CATEGORY
-function buildCategories() {
-
-  categories = {
-    Devotional: [],
-    News: [],
-    Movies: [],
-    Sports: [],
-    Entertainment: [],
-    "My Channels": [],
-    Others: []
-  };
-
-  channels.forEach(ch => {
-
-    const n = ch.name.toLowerCase();
-
-    if (n.includes("bhakti") || n.includes("devotional")) categories.Devotional.push(ch);
-    else if (n.includes("news")) categories.News.push(ch);
-    else if (n.includes("movie")) categories.Movies.push(ch);
-    else if (n.includes("sport")) categories.Sports.push(ch);
-    else if (n.includes("tv")) categories.Entertainment.push(ch);
-    else categories.Others.push(ch);
-  });
-
-  let manual = [];
-  getPlaylists().forEach(p => manual = manual.concat(p.channels));
-  categories["My Channels"] = manual;
-}
-
-// RENDER
-function render() {
-
-  grid.innerHTML = "";
-
-  Object.keys(categories).forEach(group => {
-
-    if (!categories[group].length) return;
-
-    const row = document.createElement("div");
-    row.className = "row";
-
-    const title = document.createElement("div");
-    title.className = "row-title";
-    title.innerText = group;
-
-    const items = document.createElement("div");
-    items.className = "row-items";
-
-    categories[group].forEach(ch => {
-
-      const card = document.createElement("div");
-      card.className = "card";
-      card.tabIndex = 0;
-
-      if (ch.logo) {
-        const img = document.createElement("img");
-        img.src = ch.logo;
-        img.onerror = () => card.innerText = ch.name;
-        card.appendChild(img);
-      } else {
-        card.innerText = ch.name;
-      }
-
-      card.onclick = () => play(ch);
-
-      card.addEventListener("focus", () => {
-        currentFocus = card;
-        card.scrollIntoView({ behavior:"smooth", inline:"center" });
-      });
-
-      items.appendChild(card);
-    });
-
-    row.appendChild(title);
-    row.appendChild(items);
-    grid.appendChild(row);
-  });
-
-  setTimeout(()=>document.querySelector(".card")?.focus(),200);
-}
-
-// PLAY
-function play(ch) {
-
-  overlay.innerText = ch.name;
-  overlay.style.opacity = 1;
-  setTimeout(()=>overlay.style.opacity=0,3000);
-
-  ui.style.display = "none";
-  loader.style.display = "block";
-
-  videoContainer.innerHTML = "";
-
-  const video = document.createElement("video");
-  video.src = ch.url;
-  video.autoplay = true;
-  video.controls = true;
-
-  video.style.width = "100%";
-  video.style.height = "100%";
-
-  video.onplaying = () => loader.style.display = "none";
-  video.onerror = () => loader.style.display = "none";
-
-  videoContainer.appendChild(video);
-}
-
-// ADD PLAYLIST
-document.getElementById("addPlaylistBtn").onclick = addPlaylist;
-
-function addPlaylist() {
-
-  const url = prompt("Enter M3U URL");
-  if (!url) return;
-
-  loader.style.display = "block";
-
-  fetch(url)
-    .then(r => r.text())
-    .then(text => {
-
-      const parsed = parseM3U(text);
-
-      let p = getPlaylists();
-      p.push({ name: url, url, channels: parsed });
-
-      savePlaylists(p);
-
-      loader.style.display = "none";
-
-      buildCategories();
-      render();
-    })
-    .catch(()=> loader.style.display="none");
-}
-
-// SETTINGS
-const settingsBtn = document.getElementById("settingsBtn");
-const settingsPanel = document.getElementById("settingsPanel");
-const playlistList = document.getElementById("playlistList");
-
-settingsBtn.onclick = openSettings;
-
-function openSettings() {
-
-  settingsPanel.classList.add("active");
-
-  const playlists = getPlaylists();
-  playlistList.innerHTML = "";
-
-  playlists.forEach((p,i)=>{
-
-    const item = document.createElement("div");
-    item.className = "settings-item";
-
-    item.innerHTML = `<span>${p.name}</span>
-      <button onclick="removePlaylist(${i})">Remove</button>`;
-
-    playlistList.appendChild(item);
-  });
-}
-
-function removePlaylist(i) {
-  let p = getPlaylists();
-  p.splice(i,1);
-  savePlaylists(p);
-  openSettings();
-  buildCategories();
-  render();
-}
-
-// REMOTE
-document.addEventListener("keydown", e => {
-
-  if (settingsPanel.classList.contains("active")) {
-    if (e.key==="Return"||e.key==="Escape") {
-      settingsPanel.classList.remove("active");
-    }
+function renderList() {
+  channelListEl.innerHTML = '';
+  if (!filtered.length) {
+    const li = document.createElement('li');
+    li.textContent = 'No channels';
+    channelListEl.appendChild(li);
     return;
   }
 
-  const f = document.activeElement;
+  filtered.forEach((ch, idx) => {
+    const li = document.createElement('li');
+    if (idx === selectedIndex) li.classList.add('active');
+    li.innerHTML = `<div>${ch.name}</div><div class="meta">${ch.group}</div>`;
+    li.onclick = () => {
+      selectedIndex = idx;
+      renderList();
+      playSelected();
+    };
+    channelListEl.appendChild(li);
+  });
 
-  if (e.key==="Enter" && currentFocus) currentFocus.click();
+  const active = channelListEl.querySelector('li.active');
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
 
-  if (e.key==="Escape"||e.key==="Return") {
-    ui.style.display="block";
-    videoContainer.innerHTML="";
+function applySearch() {
+  const q = searchInput.value.trim().toLowerCase();
+  filtered = !q
+    ? [...channels]
+    : channels.filter(c => c.name.toLowerCase().includes(q) || c.group.toLowerCase().includes(q));
+
+  if (selectedIndex >= filtered.length) selectedIndex = Math.max(0, filtered.length - 1);
+  renderList();
+}
+
+function githubRawToJsdelivr(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname !== 'raw.githubusercontent.com') return null;
+    const parts = u.pathname.split('/').filter(Boolean);
+    if (parts.length < 4) return null;
+    const owner = parts[0];
+    const repo = parts[1];
+    const branch = parts[2];
+    const filePath = parts.slice(3).join('/');
+    return `https://cdn.jsdelivr.net/gh/${owner}/${repo}@${branch}/${filePath}`;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function fetchTextWithTimeout(url, timeoutMs = 15000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function loadPlaylist() {
+  const url = playlistUrlEl.value.trim();
+  if (!url) {
+    setStatus('Missing playlist URL');
+    return;
   }
 
-  if (e.key==="ColorF0Red") addPlaylist();
+  try {
+    setStatus('Loading playlist...');
+    let text;
+    let usedUrl = url;
 
-  if (!f.classList.contains("card")) return;
+    try {
+      text = await fetchTextWithTimeout(url, 15000);
+    } catch (primaryErr) {
+      const mirrorUrl = githubRawToJsdelivr(url);
+      if (!mirrorUrl) throw primaryErr;
 
-  if (e.key==="ArrowRight") f.nextElementSibling?.focus();
-  if (e.key==="ArrowLeft") f.previousElementSibling?.focus();
+      setStatus('Primary URL failed, trying mirror...');
+      text = await fetchTextWithTimeout(mirrorUrl, 15000);
+      usedUrl = mirrorUrl;
+    }
 
-  if (e.key==="ArrowDown")
-    f.closest(".row")?.nextElementSibling?.querySelector(".card")?.focus();
+    channels = parseM3U(text);
+    filtered = [...channels];
+    selectedIndex = 0;
+    renderList();
 
-  if (e.key==="ArrowUp")
-    f.closest(".row")?.previousElementSibling?.querySelector(".card")?.focus();
+    localStorage.setItem('misoIptv:lastPlaylist', usedUrl);
+    setStatus(`Loaded ${channels.length} channels`);
+  } catch (err) {
+    console.error(err);
+    if (err?.name === 'AbortError') {
+      setStatus('Load failed: timeout (network/TLS blocked?)');
+      return;
+    }
+    setStatus(`Load failed: ${err.message || 'unknown error'}`);
+  }
+}
 
-});
+function playSelected() {
+  if (!filtered.length) return;
+  const ch = filtered[selectedIndex];
+  if (!ch) return;
 
-// INIT
-loadChannels();
+  nowPlayingEl.textContent = ch.name;
+  setStatus('Buffering...');
+
+  try {
+    if (hls) {
+      hls.destroy();
+      hls = null;
+    }
+
+    const url = ch.url;
+    const isHls = /\.m3u8($|\?)/i.test(url) || url.toLowerCase().includes('m3u8');
+
+    if (isHls) {
+      // Native HLS support (Safari / some TV runtimes)
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
+        video.play().catch(() => {});
+        return;
+      }
+
+      // hls.js fallback (most desktop browsers)
+      if (window.Hls && window.Hls.isSupported()) {
+        hls = new window.Hls({ enableWorker: true });
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => {});
+        });
+        hls.on(window.Hls.Events.ERROR, (_, data) => {
+          if (data?.fatal) {
+            setStatus(`HLS fatal: ${data.type || 'unknown'}`);
+          }
+        });
+        return;
+      }
+
+      setStatus('HLS not supported on this runtime');
+      return;
+    }
+
+    // Non-HLS direct playback
+    video.src = url;
+    video.play().catch(() => {});
+  } catch (err) {
+    setStatus(`Play error: ${err.message}`);
+  }
+}
+
+function moveSelection(delta) {
+  if (!filtered.length) return;
+  selectedIndex += delta;
+  if (selectedIndex < 0) selectedIndex = 0;
+  if (selectedIndex >= filtered.length) selectedIndex = filtered.length - 1;
+  renderList();
+}
+
+video.addEventListener('playing', () => setStatus('Playing'));
+video.addEventListener('pause', () => setStatus('Paused'));
+video.addEventListener('waiting', () => setStatus('Buffering...'));
+video.addEventListener('error', () => setStatus('Playback error'));
+
+loadBtn.addEventListener('click', loadPlaylist);
+searchInput.addEventListener('input', applySearch);
+
+// Tizen key registration (best effort)
+(function registerKeys() {
+  try {
+    if (window.tizen && tizen.tvinputdevice) {
+      [
+        'MediaPlay',
+        'MediaPause',
+        'MediaPlayPause',
+        'MediaStop',
+        'MediaFastForward',
+        'MediaRewind',
+        'ColorF0Red',
+        'ColorF1Green',
+        'ColorF2Yellow',
+        'ColorF3Blue',
+      ].forEach(k => {
+        try { tizen.tvinputdevice.registerKey(k); } catch (_) {}
+      });
+    }
+  } catch (_) {}
+})();
+
+window.addEventListener('keydown', (e) => {
+  const key = e.key;
+  const code = e.keyCode;
+
+  // arrows + enter
+  if (key === 'ArrowUp') {
+    if (focusArea === 'list') moveSelection(-1);
+    e.preventDefault();
+    return;
+  }
+  if (key === 'ArrowDown') {
+    if (focusArea === 'list') moveSelection(1);
+    e.preventDefault();
+    return;
+  }
+  if (key === 'ArrowLeft') {
+    focusArea = 'list';
+    e.preventDefault();
+    return;
+  }
+  if (key === 'ArrowRight') {
+    focusArea = 'player';
+    e.preventDefault();
+    return;
+  }
+  if (key === 'Enter') {
+    if (focusArea === 'list') playSelected();
+    e.preventDefault();
+    return;
+  }
+
+  // media keys
+  // Play/Pause codes vary by device, so check both key and keyCode
+  if (key === 'MediaPlayPause' || code === 10252) {
+    if (video.paused) video.play().catch(() => {});
+    else video.pause();
+    e.preventDefault();
+    return;
+  }
+  if (key === 'MediaPlay' || code === 415) {
+    video.play().catch(() => {});
+    e.preventDefault();
+    return;
+  }
+  if (key === 'MediaPause' || code === 19) {
+    video.pause();
+    e.preventDefault();
+    return;
+  }
+  if (key === 'MediaStop' || code === 413) {
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    setStatus('Stopped');
+    e.preventDefault();
+    return;
+  }
+
+  // Color keys
+  if (key === 'ColorF0Red' || code === 403) {
+    playlistUrlEl.focus();
+    e.preventDefault();
