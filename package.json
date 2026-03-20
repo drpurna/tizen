@@ -1,6 +1,6 @@
 {
-  "name": "smartiptv",
-  "version": "1.0.0",
+  "name": "Tizen",
+  "version": "1.0.6",
   "description": "Smart IPTV player module for Samsung Tizen TVs via TizenBrew",
   "license": "MIT",
 
