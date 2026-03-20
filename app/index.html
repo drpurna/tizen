@@ -3,38 +3,107 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Miso IPTV</title>
+  <title>IPTV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="app">
+
+    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
-      <h1>Miso IPTV</h1>
-      <div class="row">
-        <input id="playlistUrl" type="text" placeholder="M3U URL..." />
+      <div class="brand">
+        <div class="brand-icon">▶</div>
+        <div class="brand-text">
+          <span class="brand-name">IPTV</span>
+          <span class="brand-version">v1.0.1</span>
+        </div>
       </div>
-      <div class="row">
-        <button id="loadBtn">Load Playlist</button>
+
+      <div class="url-section">
+        <label class="field-label">PLAYLIST URL</label>
+        <div class="input-row">
+          <input id="playlistUrl" type="text" placeholder="Paste M3U URL..." spellcheck="false" autocomplete="off"/>
+        </div>
+        <div class="btn-row">
+          <button id="loadBtn" class="btn-primary">
+            <span class="btn-icon">↻</span> Load Playlist
+          </button>
+          <button id="defaultBtn" class="btn-secondary">Default</button>
+        </div>
       </div>
-      <div class="row">
-        <input id="searchInput" type="text" placeholder="Search channel..." />
+
+      <div class="search-section">
+        <label class="field-label">FILTER CHANNELS</label>
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input id="searchInput" type="text" placeholder="Search..." spellcheck="false" autocomplete="off"/>
+        </div>
+      </div>
+
+      <div class="list-header">
+        <span class="field-label">CHANNELS</span>
+        <span id="countBadge" class="count-badge">0</span>
       </div>
       <ul id="channelList"></ul>
+
+      <div class="keys-hint">
+        <div class="hint-row"><span class="key">↑↓</span> Navigate</div>
+        <div class="hint-row"><span class="key">↵</span> Play</div>
+        <div class="hint-row"><span class="key">←→</span> Focus</div>
+        <div class="hint-row"><span class="key">⏹</span> Stop</div>
+        <div class="hint-row"><span class="key">🔴</span> URL</div>
+        <div class="hint-row"><span class="key">🟢</span> Reload</div>
+      </div>
     </aside>
 
+    <!-- Player -->
     <main class="player-area" id="playerArea">
-      <div class="player-header">
-        <h2 id="nowPlaying">No channel selected</h2>
-        <span id="statusText">Idle</span>
+      <div class="player-top">
+        <div class="now-playing-info">
+          <div class="np-label">NOW PLAYING</div>
+          <div id="nowPlaying" class="np-title">No channel selected</div>
+          <div id="nowGroup" class="np-group">—</div>
+        </div>
+        <div class="status-pill" id="statusPill">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">IDLE</span>
+        </div>
       </div>
-      <video id="video" controls autoplay></video>
-      <div class="help">
-        <p>Remote: ↑↓ select, Enter play, ←→ focus, Play/Pause toggle, Stop stop, Red focus URL, Green reload playlist.</p>
+
+      <div class="video-wrap" id="videoWrap">
+        <div class="video-idle-screen" id="idleScreen">
+          <div class="idle-icon">▶</div>
+          <div class="idle-msg">Select a channel to start watching</div>
+        </div>
+        <video id="video" autoplay playsinline></video>
+        <div class="video-overlay" id="videoOverlay">
+          <div class="overlay-channel" id="overlayChannel"></div>
+          <div class="overlay-status" id="overlayStatus"></div>
+        </div>
+        <div class="buffering-spinner" id="bufferingSpinner">
+          <div class="spinner-ring"></div>
+        </div>
+      </div>
+
+      <div class="controls-bar">
+        <button class="ctrl-btn" id="prevBtn" title="Previous">⏮</button>
+        <button class="ctrl-btn" id="playPauseBtn" title="Play/Pause">⏸</button>
+        <button class="ctrl-btn" id="stopBtn" title="Stop">⏹</button>
+        <button class="ctrl-btn" id="nextBtn" title="Next">⏭</button>
+        <div class="vol-wrap">
+          <span class="vol-icon">🔊</span>
+          <input type="range" id="volSlider" min="0" max="1" step="0.05" value="1" />
+        </div>
+        <div class="ctrl-spacer"></div>
+        <div class="quality-info" id="qualityInfo">HLS</div>
       </div>
     </main>
+
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
