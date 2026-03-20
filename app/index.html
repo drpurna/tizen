@@ -1,44 +1,40 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Tizen IPTV</title>
-  <meta name="viewport" content="width=1920, height=1080">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Miso IPTV</title>
+  <link rel="stylesheet" href="./style.css" />
 </head>
-
 <body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <h1>Miso IPTV</h1>
+      <div class="row">
+        <input id="playlistUrl" type="text" placeholder="M3U URL..." />
+      </div>
+      <div class="row">
+        <button id="loadBtn">Load Playlist</button>
+      </div>
+      <div class="row">
+        <input id="searchInput" type="text" placeholder="Search channel..." />
+      </div>
+      <ul id="channelList"></ul>
+    </aside>
 
-<div id="video"></div>
-
-<div id="ui">
-
-  <div id="header">
-    <div class="logo">CHANNELS</div>
-
-    <div class="actions">
-      <div class="action-btn" id="addPlaylistBtn">＋ Playlist</div>
-      <div class="action-btn settings" id="settingsBtn">⚙</div>
-    </div>
+    <main class="player-area" id="playerArea">
+      <div class="player-header">
+        <h2 id="nowPlaying">No channel selected</h2>
+        <span id="statusText">Idle</span>
+      </div>
+      <video id="video" controls autoplay></video>
+      <div class="help">
+        <p>Remote: ↑↓ select, Enter play, ←→ focus, Play/Pause toggle, Stop stop, Red focus URL, Green reload playlist.</p>
+      </div>
+    </main>
   </div>
 
-  <div id="grid"></div>
-
-</div>
-
-<div id="overlay"></div>
-<div id="loader">Loading...</div>
-
-<!-- SETTINGS PANEL -->
-<div id="settingsPanel">
-  <div class="settings-box">
-    <div class="settings-title">Playlist Manager</div>
-    <div id="playlistList"></div>
-    <div class="settings-footer">Press RETURN to close</div>
-  </div>
-</div>
-
-<script src="app.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
