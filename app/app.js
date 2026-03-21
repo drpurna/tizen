@@ -1,12 +1,9 @@
 // ================================================================
-// IPTV v1.0.2 — app.js with HLS.js and intelligent caching
+// IPTV v1.0.2 — app.js (simplified for reliability)
 // ================================================================
 
-// Version info from HTML
 const APP_VERSION = window.APP_VERSION || '1.0.2';
-const IS_NEW_VERSION = window.IS_NEW_VERSION || false;
-
-console.log(`🚀 IPTV v${APP_VERSION} starting ${IS_NEW_VERSION ? '(fresh install)' : '(cached mode)'}`);
+console.log(`🚀 IPTV v${APP_VERSION}`);
 
 // DOM Elements
 const playlistUrlEl = document.getElementById('playlistUrl');
@@ -21,11 +18,8 @@ const statusTextEl = document.getElementById('statusText');
 const video = document.getElementById('video');
 const videoWrap = document.getElementById('videoWrap');
 
-// HLS.js instance
+// State
 let hls = null;
-let currentHlsUrl = null;
-
-// App state
 let channels = [];
 let filtered = [];
 let selectedIndex = 0;
@@ -34,13 +28,7 @@ let plIdx = 0;
 let isFullscreen = false;
 let lastTap = 0;
 
-// Cache keys
 const STORAGE_KEY = 'iptv:lastPlaylist';
-const CACHE_CHANNELS_KEY = 'iptv_channels';
-const CACHE_PLAYLIST_KEY = 'iptv_playlist_url';
-const CACHE_TIMESTAMP_KEY = 'iptv_channels_timestamp';
-
-// Default playlists
 const DEFAULT_PLAYLISTS = [
   { name: 'Telugu', url: 'https://iptv-org.github.io/iptv/languages/tel.m3u' },
   { name: 'Hindi', url: 'https://iptv-org.github.io/iptv/languages/hin.m3u' },
@@ -52,101 +40,7 @@ const DEFAULT_PLAYLISTS = [
 ];
 
 // ================================================================
-// Storage Manager
-// ================================================================
-class StorageManager {
-  constructor() {
-    this.MAX_STORAGE_MB = 5;
-  }
-  
-  checkStorageUsage() {
-    try {
-      let total = 0;
-      for (let key in localStorage) {
-        if (localStorage.hasOwnProperty(key)) {
-          total += (localStorage[key] || '').length * 2;
-        }
-      }
-      const usedMB = (total / (1024 * 1024)).toFixed(2);
-      console.log(`💾 Storage usage: ${usedMB} MB / ${this.MAX_STORAGE_MB} MB`);
-      return usedMB;
-    } catch(e) {
-      return 'unknown';
-    }
-  }
-  
-  saveChannels(channels, url) {
-    try {
-      const compressed = JSON.stringify(channels);
-      localStorage.setItem(CACHE_CHANNELS_KEY, compressed);
-      localStorage.setItem(CACHE_PLAYLIST_KEY, url);
-      localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-      console.log('💾 Channels cached');
-    } catch(e) {
-      console.warn('Failed to cache channels:', e);
-    }
-  }
-  
-  loadChannels() {
-    try {
-      const cached = localStorage.getItem(CACHE_CHANNELS_KEY);
-      const url = localStorage.getItem(CACHE_PLAYLIST_KEY);
-      const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-      
-      if (cached && url) {
-        const channels = JSON.parse(cached);
-        const cacheAge = timestamp ? Date.now() - parseInt(timestamp) : Infinity;
-        return { channels, url, cacheAge };
-      }
-    } catch(e) {
-      console.warn('Failed to load cached channels:', e);
-    }
-    return null;
-  }
-  
-  cleanOldData() {
-    const keysToKeep = ['iptv_version', 'iptv_last_update', STORAGE_KEY];
-    for (let key in localStorage) {
-      if (!keysToKeep.includes(key) && localStorage.hasOwnProperty(key)) {
-        localStorage.removeItem(key);
-      }
-    }
-    console.log('🧹 Cleaned old data');
-  }
-}
-
-const storageManager = new StorageManager();
-
-// ================================================================
-// HLS.js Configuration
-// ================================================================
-const HLS_CONFIG = {
-  enableWorker: true,
-  lowLatencyMode: true,
-  maxBufferLength: 30,
-  maxMaxBufferLength: 600,
-  backBufferLength: 60,
-  liveBackBufferLength: 60,
-  maxBufferSize: 60 * 1000 * 1000,
-  maxBufferHole: 0.5,
-  maxFragLookUpTolerance: 0.25,
-  abrEwmaFastLive: 3,
-  abrEwmaSlowLive: 9,
-  abrEwmaFastVoD: 3,
-  abrEwmaSlowVoD: 9,
-  abrEwmaDefaultEstimate: 5e5,
-  abrBandWidthFactor: 0.95,
-  abrBandWidthUpFactor: 0.7,
-  capLevelToPlayerSize: true,
-  capLevelOnFPSDrop: true,
-  stretchShortVideoTrack: true,
-  enableSoftwareAES: true,
-  progressive: false,
-  debug: false
-};
-
-// ================================================================
-// Utility Functions
+// Helper functions
 // ================================================================
 function setStatus(text) {
   if (statusTextEl) statusTextEl.textContent = text;
@@ -192,7 +86,7 @@ function parseM3U(text) {
 }
 
 // ================================================================
-// Render Functions
+// Render list
 // ================================================================
 function renderList() {
   if (!channelListEl) return;
@@ -297,40 +191,81 @@ function githubRawToJsdelivr(url) {
 }
 
 // ================================================================
-// HLS.js Functions
+// Playlist Loading
+// ================================================================
+function onLoaded(text, url) {
+  console.log('Parsing M3U...');
+  channels = parseM3U(text);
+  console.log(`Parsed ${channels.length} channels`);
+  filtered = [...channels];
+  selectedIndex = 0;
+  renderList();
+  setStatus(`Loaded ${channels.length} channels`);
+  setFocusArea('list');
+  // Save last URL
+  try { localStorage.setItem(STORAGE_KEY, url); } catch (_) {}
+}
+
+function loadPlaylist(urlOverride) {
+  const url = (urlOverride || (playlistUrlEl ? playlistUrlEl.value : '')).trim();
+  if (!url) {
+    setStatus('Enter a playlist URL');
+    return;
+  }
+
+  if (playlistUrlEl) playlistUrlEl.value = url;
+  setStatus('Loading playlist...');
+  if (loadBtn) loadBtn.disabled = true;
+
+  console.log('Fetching playlist:', url);
+  xhrFetch(url, 20000, (err, text) => {
+    if (loadBtn) loadBtn.disabled = false;
+    if (err) {
+      console.error('Fetch error:', err);
+      // Try mirror
+      const mirror = githubRawToJsdelivr(url);
+      if (mirror) {
+        setStatus('Trying mirror...');
+        xhrFetch(mirror, 20000, (err2, text2) => {
+          if (err2) {
+            setStatus(`Load failed: ${err2.message}`);
+            return;
+          }
+          onLoaded(text2, url);
+        });
+      } else {
+        setStatus(`Load failed: ${err.message}`);
+      }
+      return;
+    }
+    onLoaded(text, url);
+  });
+}
+
+// ================================================================
+// HLS.js Integration (unchanged)
 // ================================================================
 function setupHlsEvents() {
   if (!hls || !window.Hls) return;
-  
   hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
-    console.log('HLS manifest parsed');
     setStatus('Playing');
-    if (video) video.play().catch(err => console.error('Play error:', err));
+    if (video) video.play().catch(() => {});
   });
-  
-  hls.on(window.Hls.Events.MANIFEST_LOADING, () => setStatus('Loading manifest...'));
-  hls.on(window.Hls.Events.BUFFER_APPENDING, () => setStatus('Buffering...'));
-  hls.on(window.Hls.Events.BUFFER_APPENDED, () => { if (video && video.paused && video.readyState >= 2) setStatus('Ready'); });
-  
   hls.on(window.Hls.Events.ERROR, (event, data) => {
     console.error('HLS Error:', data);
     if (data.fatal) {
-      switch (data.type) {
-        case window.Hls.ErrorTypes.NETWORK_ERROR:
-          setStatus('Network error, retrying...');
-          hls.startLoad();
-          break;
-        case window.Hls.ErrorTypes.MEDIA_ERROR:
-          setStatus('Media error, recovering...');
-          hls.recoverMediaError();
-          break;
-        default:
-          setStatus(`Fatal error: ${data.type}`);
-          destroyHls();
-          break;
+      if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
+        setStatus('Network error, retrying...');
+        hls.startLoad();
+      } else if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
+        setStatus('Media error, recovering...');
+        hls.recoverMediaError();
+      } else {
+        setStatus('Fatal error');
+        destroyHls();
       }
     } else {
-      setStatus(`Stream issue: ${data.details || 'unknown'}`);
+      setStatus('Stream issue');
     }
   });
 }
@@ -340,9 +275,8 @@ function initHls() {
     try { hls.destroy(); } catch(e) {}
     hls = null;
   }
-  
   if (window.Hls && window.Hls.isSupported()) {
-    hls = new window.Hls(HLS_CONFIG);
+    hls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
     setupHlsEvents();
     return true;
   } else if (video && video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -356,30 +290,24 @@ function destroyHls() {
     try { hls.destroy(); } catch(e) {}
     hls = null;
   }
-  currentHlsUrl = null;
 }
 
 function playHlsStream(url) {
   destroyHls();
-  const hlsSupported = initHls();
-  
-  if (hlsSupported === true && hls) {
+  const supported = initHls();
+  if (supported === true && hls) {
     hls.loadSource(url);
     hls.attachMedia(video);
-    currentHlsUrl = url;
-    setStatus('Loading HLS stream...');
-  } else if (hlsSupported === 'native' && video) {
+    setStatus('Loading HLS...');
+  } else if (supported === 'native' && video) {
     video.src = url;
-    video.play().catch(err => setStatus(`Play error: ${err.message}`));
-    setStatus('Playing (native HLS)');
+    video.play().catch(() => setStatus('Play error'));
+    setStatus('Playing (native)');
   } else {
-    setStatus('HLS not supported on this device');
+    setStatus('HLS not supported');
   }
 }
 
-// ================================================================
-// Playback Functions
-// ================================================================
 function playSelected() {
   if (!filtered.length) return;
   const ch = filtered[selectedIndex];
@@ -389,84 +317,21 @@ function playSelected() {
   if (nowGroupEl) nowGroupEl.textContent = ch.group || '';
   setStatus(`Loading: ${ch.name}`);
 
-  try {
-    const url = ch.url;
-    const isHls = /\.m3u8($|\?)/i.test(url) || url.toLowerCase().includes('m3u8');
+  const url = ch.url;
+  const isHls = /\.m3u8($|\?)/i.test(url) || url.toLowerCase().includes('m3u8');
 
-    if (isHls) {
-      playHlsStream(url);
-    } else if (video) {
-      destroyHls();
-      video.src = url;
-      video.play().catch(err => setStatus(`Play error: ${err.message}`));
-      setStatus('Playing direct stream');
-    }
-  } catch (err) {
-    setStatus(`Play error: ${err.message}`);
+  if (isHls) {
+    playHlsStream(url);
+  } else if (video) {
+    destroyHls();
+    video.src = url;
+    video.play().catch(() => setStatus('Play error'));
+    setStatus('Playing direct');
   }
 }
 
 // ================================================================
-// Playlist Loading
-// ================================================================
-function onLoaded(text, url) {
-  channels = parseM3U(text);
-  filtered = [...channels];
-  selectedIndex = 0;
-  renderList();
-  
-  storageManager.saveChannels(channels, url);
-  
-  try { localStorage.setItem(STORAGE_KEY, url); } catch (_) {}
-  setStatus(`Loaded ${channels.length} channels`);
-  setFocusArea('list');
-}
-
-function loadPlaylist(urlOverride) {
-  const url = (urlOverride || (playlistUrlEl ? playlistUrlEl.value : '')).trim();
-  if (!url) { setStatus('Enter a playlist URL'); return; }
-
-  if (playlistUrlEl) playlistUrlEl.value = url;
-  setStatus('Loading playlist...');
-  if (loadBtn) loadBtn.disabled = true;
-
-  if (!IS_NEW_VERSION) {
-    const cached = storageManager.loadChannels();
-    if (cached && cached.url === url && cached.cacheAge < 3600000) {
-      channels = cached.channels;
-      filtered = [...channels];
-      selectedIndex = 0;
-      renderList();
-      setStatus(`Loaded ${channels.length} channels (cached)`);
-      if (loadBtn) loadBtn.disabled = false;
-      setFocusArea('list');
-      return;
-    }
-  }
-
-  xhrFetch(url, 20000, (err, text) => {
-    if (err) {
-      const mirror = githubRawToJsdelivr(url);
-      if (mirror) {
-        setStatus('Trying mirror...');
-        xhrFetch(mirror, 20000, (err2, text2) => {
-          if (loadBtn) loadBtn.disabled = false;
-          if (err2) { setStatus(`Load failed: ${err2.message}`); return; }
-          onLoaded(text2, url);
-        });
-      } else {
-        if (loadBtn) loadBtn.disabled = false;
-        setStatus(`Load failed: ${err.message}`);
-      }
-      return;
-    }
-    if (loadBtn) loadBtn.disabled = false;
-    onLoaded(text, url);
-  });
-}
-
-// ================================================================
-// Fullscreen Functions
+// Fullscreen (unchanged)
 // ================================================================
 function enterFullscreen() {
   const el = videoWrap;
@@ -525,17 +390,14 @@ document.addEventListener('webkitfullscreenchange', () => {
 });
 
 // ================================================================
-// Key Handling
+// Key Handling (simplified)
 // ================================================================
 (function registerKeys() {
   try {
     if (window.tizen && tizen.tvinputdevice) {
-      [
-        'MediaPlay', 'MediaPause', 'MediaPlayPause', 'MediaStop',
-        'MediaFastForward', 'MediaRewind',
-        'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue',
-        'ChannelUp', 'ChannelDown', 'Back',
-      ].forEach(k => { try { tizen.tvinputdevice.registerKey(k); } catch (_) {} });
+      ['MediaPlay','MediaPause','MediaPlayPause','MediaStop','MediaFastForward','MediaRewind',
+       'ColorF0Red','ColorF1Green','ColorF2Yellow','ColorF3Blue','ChannelUp','ChannelDown','Back']
+        .forEach(k => { try { tizen.tvinputdevice.registerKey(k); } catch (_) {} });
     }
   } catch (_) {}
 })();
@@ -602,18 +464,21 @@ window.addEventListener('keydown', (e) => {
 });
 
 // ================================================================
-// Restore last playlist and initialize
+// Start
 // ================================================================
-const savedUrl = (() => { try { return localStorage.getItem(STORAGE_KEY) || ''; } catch(e) { return ''; } })();
-if (playlistUrlEl) playlistUrlEl.value = savedUrl || DEFAULT_PLAYLISTS[0].url;
+// Restore last used URL or use default
+let savedUrl = '';
+try { savedUrl = localStorage.getItem(STORAGE_KEY) || ''; } catch(e) {}
+if (!savedUrl) savedUrl = DEFAULT_PLAYLISTS[0].url;
+if (playlistUrlEl) playlistUrlEl.value = savedUrl;
 
-// Check HLS.js availability
+// Check HLS.js
 if (typeof window.Hls === 'undefined') {
   console.error('HLS.js not loaded!');
-  setStatus('HLS.js not available');
+  setStatus('HLS.js missing');
 } else {
   console.log('HLS.js version:', window.Hls.version);
 }
 
-// Start the app
-loadPlaylist(playlistUrlEl ? playlistUrlEl.value : DEFAULT_PLAYLISTS[0].url);
+// Load playlist
+loadPlaylist(savedUrl);
