@@ -1,7 +1,7 @@
 {
   "name": "iptv",
-  "version": "1.0.1",
-  "description": "Premium IPTV player for TizenBrew — Samsung TV 2K/4K",
+  "version": "1.0.2",
+  "description": "Premium IPTV player with HLS.js for TizenBrew — Samsung TV 2K/4K",
   "license": "MIT",
   "private": false,
   "publishConfig": { "access": "public" },
@@ -9,17 +9,50 @@
     "pack:check": "npm pack --dry-run",
     "publish:public": "npm publish --access public"
   },
-  "files": ["app", "service.js", "README.md", "package.json"],
-  "keywords": ["tizen", "tizenbrew", "iptv", "m3u", "hls", "samsung", "tv"],
+  "files": [
+    "app",
+    "service.js",
+    "README.md",
+    "package.json"
+  ],
+  "keywords": [
+    "tizen",
+    "tizenbrew",
+    "iptv",
+    "m3u",
+    "hls",
+    "samsung",
+    "tv",
+    "adaptive-bitrate",
+    "streaming"
+  ],
   "packageType": "app",
   "appName": "IPTV",
   "appPath": "app/index.html",
   "keys": [
-    "MediaPlay","MediaPause","MediaPlayPause","MediaStop",
-    "MediaFastForward","MediaRewind",
-    "ColorF0Red","ColorF1Green","ColorF2Yellow","ColorF3Blue",
-    "ChannelUp","ChannelDown","Back"
+    "MediaPlay",
+    "MediaPause",
+    "MediaPlayPause",
+    "MediaStop",
+    "MediaFastForward",
+    "MediaRewind",
+    "ColorF0Red",
+    "ColorF1Green",
+    "ColorF2Yellow",
+    "ColorF3Blue",
+    "ChannelUp",
+    "ChannelDown",
+    "Back"
   ],
   "serviceFile": "service.js",
-  "evaluateScriptOnDocumentStart": false
+  "evaluateScriptOnDocumentStart": false,
+  "author": "drpurna",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/drpurna/tizentv.git"
+  },
+  "bugs": {
+    "url": "https://github.com/drpurna/tizentv/issues"
+  },
+  "homepage": "https://github.com/drpurna/tizentv#readme"
 }
