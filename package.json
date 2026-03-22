@@ -42,10 +42,5 @@
   "author": "drpurna",
   "repository": {
     "type": "git",
-    "url": "https://github.com/drpurna/tizentv.git"
+    "url": "https://github.com/drpurna/tizen"
   },
-  "bugs": {
-    "url": "https://github.com/drpurna/tizentv/issues"
-  },
-  "homepage": "https://github.com/drpurna/tizentv#readme"
-}
