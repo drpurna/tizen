@@ -2,7 +2,7 @@
    IPTV PRO — style.css  — Premium TizenBrew Theme
    ================================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Inter:wght@400;500;600&display=swap');
+
 
 :root {
   --bg:        #0a0a0a;
@@ -18,8 +18,8 @@
   --hi:        #ffffff;
   --radius:    10px;
   --sidebar-w: 380px;
-  --font-title:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;
-  --font-body: 'Inter', Arial, sans-serif;
+  --font-title: 'SamsungSharpSans-Bold', 'Arial Black', 'Arial Narrow', Arial, sans-serif;
+  --font-body: 'SamsungOne', Arial, sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
