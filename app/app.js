@@ -1,5 +1,5 @@
 // ================================================================
-// IPTV v1.0.2 — app.js (original working + HLS.js)
+// IPTV v1.0.2 — app.js (working with HLS.js)
 // ================================================================
 
 const playlistUrlEl = document.getElementById('playlistUrl');
@@ -14,10 +14,10 @@ const statusTextEl  = document.getElementById('statusText');
 const video         = document.getElementById('video');
 const videoWrap     = document.getElementById('videoWrap');
 
-// Default playlists
+// Updated default playlists
 const DEFAULT_PLAYLISTS = [
   { name: 'Telugu',  url: 'https://iptv-org.github.io/iptv/languages/tel.m3u' },
-  { name: 'India',   url: 'https://https://iptv-org.github.io/iptv/countries/in.m3u' },
+  { name: 'India',   url: 'https://iptv-org.github.io/iptv/countries/in.m3u' },
   { name: 'Sports',  url: 'https://iptv-org.github.io/iptv/categories/sports.m3u' },
   { name: 'Movies',  url: 'https://iptv-org.github.io/iptv/categories/movies.m3u' },
 ];
@@ -31,17 +31,14 @@ let plIdx         = 0;
 let isFullscreen  = false;
 let lastTap       = 0;
 
-// Restore last used playlist
 const STORAGE_KEY = 'iptv:lastPlaylist';
 const savedUrl = (() => { try { return localStorage.getItem(STORAGE_KEY) || ''; } catch(e) { return ''; } })();
 playlistUrlEl.value = savedUrl || DEFAULT_PLAYLISTS[0].url;
 
-// Status
 function setStatus(text) {
   statusTextEl.textContent = text;
 }
 
-// M3U parser
 function parseM3U(text) {
   const lines = text.split(/\r?\n/);
   const out = [];
@@ -70,7 +67,6 @@ function parseM3U(text) {
   return out;
 }
 
-// Render list
 function renderList() {
   channelListEl.innerHTML = '';
   countBadge.textContent = filtered.length;
@@ -99,7 +95,6 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// Search
 function applySearch() {
   const q = searchInput.value.trim().toLowerCase();
   filtered = !q ? [...channels] : channels.filter(c => c.name.toLowerCase().includes(q) || c.group.toLowerCase().includes(q));
@@ -107,7 +102,6 @@ function applySearch() {
   renderList();
 }
 
-// XHR fetch
 function xhrFetch(url, timeoutMs, callback) {
   let done = false;
   const xhr = new XMLHttpRequest();
@@ -148,7 +142,6 @@ function githubRawToJsdelivr(url) {
   } catch (_) { return null; }
 }
 
-// Load playlist
 function loadPlaylist(urlOverride) {
   const url = (urlOverride || playlistUrlEl.value).trim();
   if (!url) { setStatus('Enter a playlist URL'); return; }
@@ -186,7 +179,6 @@ function onLoaded(text, url) {
   setFocusArea('list');
 }
 
-// Playback with HLS.js
 function playSelected() {
   if (!filtered.length) return;
   const ch = filtered[selectedIndex];
@@ -224,7 +216,6 @@ function playSelected() {
   }
 }
 
-// Navigation
 function moveSelection(delta) {
   if (!filtered.length) return;
   selectedIndex += delta;
@@ -233,7 +224,6 @@ function moveSelection(delta) {
   renderList();
 }
 
-// Focus area
 function setFocusArea(area) {
   focusArea = area;
   if (area === 'url') {
@@ -247,7 +237,6 @@ function setFocusArea(area) {
   }
 }
 
-// Fullscreen
 function enterFullscreen() {
   const el = videoWrap;
   const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
@@ -255,12 +244,14 @@ function enterFullscreen() {
   document.body.classList.add('fullscreen');
   isFullscreen = true;
 }
+
 function exitFullscreen() {
   const fn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
   if (fn) { fn.call(document); return; }
   document.body.classList.remove('fullscreen');
   isFullscreen = false;
 }
+
 function toggleFullscreen() { isFullscreen ? exitFullscreen() : enterFullscreen(); }
 
 document.addEventListener('fullscreenchange', () => {
@@ -295,7 +286,6 @@ defaultBtn.addEventListener('click', () => {
 });
 searchInput.addEventListener('input', applySearch);
 
-// Tizen key registration
 (function registerKeys() {
   try {
     if (window.tizen && tizen.tvinputdevice) {
@@ -309,7 +299,6 @@ searchInput.addEventListener('input', applySearch);
   } catch (_) {}
 })();
 
-// Key handling
 window.addEventListener('keydown', (e) => {
   const key = e.key;
   const code = e.keyCode;
@@ -371,5 +360,4 @@ window.addEventListener('keydown', (e) => {
   if (key === 'ColorF3Blue'   || code === 406) { defaultBtn.click(); e.preventDefault(); return; }
 });
 
-// Start
 loadPlaylist(playlistUrlEl.value);
