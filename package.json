@@ -23,10 +23,10 @@
     "tv"
   ],
   "packageType": "app",
-  "appName": "IPTV",
+  "appName": "IPTV Pro",
   "appPath": "app/index.html",
   "serviceFile": "service.js",
-  "evaluateScriptOnDocumentStart": false,
+  "evaluateScriptOnDocumentStart": true,
   "keys": [
     "MediaPlay",
     "MediaPause",
@@ -41,5 +41,6 @@
     "ChannelUp",
     "ChannelDown",
     "Back"
-  ]
+  ],
+  "main": "service.js"
 }
