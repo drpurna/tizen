@@ -1,15 +1,11 @@
 {
-  "name": "tizenbrew-iptv-pro",
+  "name": "tizen",
   "version": "2.0.0",
   "description": "Premium IPTV player for TizenBrew - Samsung TV",
   "license": "MIT",
   "private": false,
   "publishConfig": {
     "access": "public"
-  },
-  "scripts": {
-    "pack:check": "npm pack --dry-run",
-    "publish:public": "npm publish --access public"
   },
   "files": [
     "app",
