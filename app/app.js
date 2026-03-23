@@ -1,7 +1,13 @@
 // ================================================================
-// IPTV — app.js v5.0  |  Samsung TV 2025 / TizenBrew
-// Virtual Scroll · Favourites · Aspect Ratio · Remote Dial
-// Red = playlist cycle · Green = fav toggle · Clean name strip
+// IPTV — app.js v6.0  |  Samsung TV 2025 / TizenBrew
+// ================================================================
+// Changes v6:
+//  • cleanName strips ALL brackets/parens + quality junk completely
+//  • Aspect ratio selectable via remote (Right arrow on player focuses AR btn)
+//  • Preview starts automatically on selection after 700ms debounce
+//  • Fast scroll kills any pending preview — no crash, no stale load
+//  • Remote number dial jumps channel without auto-play (just highlights)
+//  • Press ENTER on dialled number to play
 // ================================================================
 
 (function checkHLS(){
@@ -32,27 +38,37 @@ const PLAYLISTS = [
   { name:'Telugu', url:'https://iptv-org.github.io/iptv/languages/tel.m3u' },
   { name:'India',  url:'https://iptv-org.github.io/iptv/countries/in.m3u'  },
 ];
-const FAV_IDX       = 2;
-const FAV_KEY       = 'iptv:favs';
-const PLAYLIST_KEY  = 'iptv:lastPl';
+const FAV_IDX      = 2;
+const FAV_KEY      = 'iptv:favs';
+const PLAYLIST_KEY = 'iptv:lastPl';
 
 /* ── HLS config ──────────────────────────────────────────── */
 const HLS_CFG = {
   enableWorker:false, lowLatencyMode:false,
-  backBufferLength:30, maxBufferLength:60, maxMaxBufferLength:120,
-  maxBufferSize:60*1000*1000, maxBufferHole:0.5, nudgeMaxRetry:5,
-  startLevel:-1, abrEwmaDefaultEstimate:1500000,
-  manifestLoadingMaxRetry:4, manifestLoadingRetryDelay:500,
-  levelLoadingMaxRetry:4,    levelLoadingRetryDelay:500,
-  fragLoadingMaxRetry:6,     fragLoadingRetryDelay:500,
-  xhrSetup:function(xhr){ xhr.timeout=15000; },
+  backBufferLength:20, maxBufferLength:30, maxMaxBufferLength:60,
+  maxBufferSize:30*1000*1000, maxBufferHole:0.5, nudgeMaxRetry:3,
+  startLevel:-1, abrEwmaDefaultEstimate:1000000,
+  manifestLoadingMaxRetry:3, manifestLoadingRetryDelay:500,
+  levelLoadingMaxRetry:3,    levelLoadingRetryDelay:500,
+  fragLoadingMaxRetry:4,     fragLoadingRetryDelay:500,
+  xhrSetup:function(xhr){ xhr.timeout=12000; },
 };
+
+/* ── Aspect ratio modes ──────────────────────────────────── */
+const AR_MODES = [
+  { cls:'',         label:'Fit'  },   // letterbox / contain
+  { cls:'ar-fill',  label:'Fill' },   // stretch to fill
+  { cls:'ar-cover', label:'Crop' },   // cover (zoom, crop edges)
+  { cls:'ar-wide',  label:'Wide' },   // 4:3 → 16:9 horizontal stretch
+];
+let arIdx = 0;
 
 /* ── State ───────────────────────────────────────────────── */
 let channels      = [];
 let allChannels   = [];
 let filtered      = [];
 let selectedIndex = 0;
+// focusArea: 'list' | 'search' | 'ar'
 let focusArea     = 'list';
 let hls           = null;
 let plIdx         = 0;
@@ -60,40 +76,37 @@ let isFullscreen  = false;
 let hasPlayed     = false;
 let fsHintTimer   = null;
 let loadBarTimer  = null;
+
+// Preview debounce — fires 700 ms after user stops navigating
+let previewTimer  = null;
+const PREVIEW_DELAY = 700; // ms — fast scrolling won't trigger load
+
+// Number dial
 let dialBuffer    = '';
 let dialTimer     = null;
 
-/* Aspect ratio cycle: contain → fill → cover → wide */
-const AR_MODES = [
-  { cls:'',         label:'⛶ Fit',   obj:'contain' },
-  { cls:'ar-fill',  label:'⛶ Fill',  obj:'fill'    },
-  { cls:'ar-cover', label:'⛶ Crop',  obj:'cover'   },
-  { cls:'ar-wide',  label:'⛶ Wide',  obj:'contain' },
-];
-let arIdx = 0;
-
 /* ── Favourites ──────────────────────────────────────────── */
 let favSet = new Set();
-(function loadFavs(){
+(function(){
   try{ const r=localStorage.getItem(FAV_KEY); if(r) favSet=new Set(JSON.parse(r)); }catch(e){}
 })();
 function saveFavs(){ try{ localStorage.setItem(FAV_KEY,JSON.stringify([...favSet])); }catch(e){} }
 function isFav(ch){ return favSet.has(ch.url); }
 function toggleFav(ch){
-  favSet.has(ch.url) ? favSet.delete(ch.url) : favSet.add(ch.url);
+  favSet.has(ch.url)?favSet.delete(ch.url):favSet.add(ch.url);
   saveFavs();
   if(plIdx===FAV_IDX) showFavourites();
   VS.refresh();
-  showToast(favSet.has(ch.url) ? '★  Added to Favourites' : '✕  Removed from Favourites');
+  showToast(isFav(ch)?'★  Added to Favourites':'✕  Removed from Favourites');
 }
 function showFavourites(){
   filtered=allChannels.filter(c=>favSet.has(c.url));
   selectedIndex=0; renderList();
-  setStatus(filtered.length ? filtered.length+' favourites' : 'No favourites yet','idle');
+  setStatus(filtered.length?filtered.length+' favourites':'No favourites yet','idle');
 }
 
 /* ── Toast ───────────────────────────────────────────────── */
-let toastEl=null, toastTm=null;
+let toastEl=null,toastTm=null;
 function showToast(msg){
   if(!toastEl){ toastEl=document.createElement('div'); toastEl.id='toast'; document.body.appendChild(toastEl); }
   toastEl.textContent=msg; toastEl.style.opacity='1';
@@ -114,13 +127,15 @@ function finishLoadBar(){
 }
 
 /* ── Clean channel name ──────────────────────────────────── */
+// Aggressively strips quality/resolution tags and ALL bracket types
 function cleanName(raw){
   return raw
-    /* remove resolution tags like 576p 720p 1080p 1080i 4K UHD HD SD FHD */
-    .replace(/\b(4K|UHD|FHD|SD|HD|[0-9]{3,4}[piP])\b/g,'')
-    /* remove bracketed/parenthesised quality markers */
-    .replace(/[\[(][^\])]*(576|720|1080|2160|HD|SD|FHD|UHD|4K)[^\])]*[\])]/gi,'')
-    /* collapse multiple spaces */
+    // remove anything inside parentheses or square brackets entirely
+    .replace(/\s*[\[(][^\]*)]*[\])]/g, '')
+    // remove standalone quality/resolution words
+    .replace(/\b(4K|UHD|FHD|HLS|HEVC|H264|H\.264|SD|HD|576[piP]?|720[piP]?|1080[piP]?|2160[piP]?)\b/gi, '')
+    // remove trailing pipe/dash/dot separators often left behind
+    .replace(/[\|\-–—]+\s*$/g, '')
     .replace(/\s{2,}/g,' ')
     .trim();
 }
@@ -131,10 +146,11 @@ function parseM3U(text){
   for(const raw of lines){
     const line=raw.trim(); if(!line) continue;
     if(line.startsWith('#EXTINF')){
-      const namePart=line.includes(',') ? line.split(',').slice(1).join(',').trim() : 'Unknown';
+      const namePart=line.includes(',')?line.split(',').slice(1).join(',').trim():'Unknown';
       const gm=line.match(/group-title="([^"]+)"/i);
       const lm=line.match(/tvg-logo="([^"]+)"/i);
-      meta={ name:cleanName(namePart)||namePart, group:gm?gm[1]:'Other', logo:lm?lm[1]:'' };
+      const cleaned=cleanName(namePart);
+      meta={ name:cleaned||namePart, group:gm?gm[1]:'Other', logo:lm?lm[1]:'' };
       continue;
     }
     if(!line.startsWith('#')&&meta){ out.push({name:meta.name,group:meta.group,logo:meta.logo,url:line}); meta=null; }
@@ -146,14 +162,13 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 function initials(n){ return n.replace(/[^a-zA-Z0-9]/g,' ').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?'; }
 
 /* ================================================================
-   VIRTUAL SCROLL ENGINE v2
-   – requestAnimationFrame throttled scroll listener
-   – Node pool: never removes/adds more than necessary
-   – No transition on li — eliminates jank entirely
+   VIRTUAL SCROLL ENGINE v3
+   Fragment-based batch insert · RAF-throttled scroll · No CSS
+   transitions on rows (eliminates jank)
    ================================================================ */
 const VS = {
-  ITEM_H:  72,   /* ← must match CSS --item-h */
-  OVERSCAN: 8,   /* extra rows above + below viewport */
+  ITEM_H:  80,   // ← MUST match CSS --item-h
+  OVERSCAN: 6,
   c:null, inner:null, vh:0, st:0, total:0,
   rs:-1, re:-1, nodes:[], raf:null,
 
@@ -175,7 +190,6 @@ const VS = {
 
   setData(n){
     this.total=n; this.rs=-1; this.re=-1;
-    /* fast DOM clear */
     this.inner.textContent='';
     this.nodes=[];
     this.inner.style.cssText='position:relative;width:100%;height:'+(n*this.ITEM_H)+'px;';
@@ -200,28 +214,28 @@ const VS = {
     if(start===this.rs&&end===this.re) return;
     this.rs=start; this.re=end;
 
-    /* remove nodes outside window */
     this.nodes=this.nodes.filter(nd=>{
       if(nd._i<start||nd._i>end){ this.inner.removeChild(nd); return false; }
       return true;
     });
 
-    /* add missing */
     const have=new Set(this.nodes.map(n=>n._i));
     const frag=document.createDocumentFragment();
     for(let i=start;i<=end;i++){
-      if(!have.has(i)){ frag.appendChild(this._build(i)); }
+      if(!have.has(i)) frag.appendChild(this._build(i));
     }
     if(frag.childNodes.length) this.inner.appendChild(frag);
     this.nodes=[...this.inner.children];
 
-    /* sync active */
     const sel=selectedIndex;
     for(const nd of this.nodes){
       const on=nd._i===sel;
-      if(on!==nd._on){ nd._on=on; nd.classList.toggle('active',on); }
-      if(nd._nm) nd._nm.style.color=on?'#000':'';
-      if(nd._nu) nd._nu.style.color=on?'#bbb':'';
+      if(on!==nd._on){
+        nd._on=on;
+        nd.classList.toggle('active',on);
+        if(nd._nm) nd._nm.style.color=on?'#000':'';
+        if(nd._nu) nd._nu.style.color=on?'#999':'';
+      }
     }
   },
 
@@ -246,9 +260,13 @@ const VS = {
     li._nm=li.querySelector('.ch-name');
     li._nu=li.querySelector('.ch-num');
 
-    if(i===selectedIndex){ li._on=true; li.classList.add('active'); if(li._nm)li._nm.style.color='#000'; if(li._nu)li._nu.style.color='#bbb'; }
+    if(i===selectedIndex){
+      li._on=true; li.classList.add('active');
+      if(li._nm) li._nm.style.color='#000';
+      if(li._nu) li._nu.style.color='#999';
+    }
 
-    li.addEventListener('click',()=>{ selectedIndex=i; VS.refresh(); playSelected(); });
+    li.addEventListener('click',()=>{ selectedIndex=i; VS.refresh(); schedulePreview(); });
     return li;
   },
 
@@ -261,8 +279,8 @@ function renderList(){
   if(!filtered.length){
     VS.setData(0);
     const li=document.createElement('li');
-    li.style.cssText='position:absolute;top:0;left:0;right:0;padding:20px 14px;';
-    li.innerHTML='<div class="ch-info"><div class="ch-name" style="color:#2a2a2a;font-size:18px">No channels</div></div>';
+    li.style.cssText='position:absolute;top:0;left:0;right:0;padding:24px 16px;';
+    li.innerHTML='<div class="ch-info"><div class="ch-name" style="color:#2a2a2a">No channels</div></div>';
     VS.inner.appendChild(li);
     return;
   }
@@ -276,12 +294,11 @@ function applySearch(){
   clearTimeout(sdTm);
   sdTm=setTimeout(()=>{
     const q=searchInput.value.trim().toLowerCase();
-    filtered=!q ? channels.slice()
-      : channels.filter(c=>c.name.toLowerCase().includes(q)||c.group.toLowerCase().includes(q));
+    filtered=!q?channels.slice():channels.filter(c=>c.name.toLowerCase().includes(q)||c.group.toLowerCase().includes(q));
     selectedIndex=0; renderList();
   },120);
 }
-function commitSearch(){ setFocus('list'); if(filtered.length===1){ selectedIndex=0; VS.refresh(); playSelected(); } }
+function commitSearch(){ setFocus('list'); if(filtered.length===1){ selectedIndex=0; VS.refresh(); schedulePreview(); } }
 function clearSearch(){ searchInput.value=''; applySearch(); setFocus('list'); }
 searchInput.addEventListener('input',applySearch);
 
@@ -294,23 +311,26 @@ function xhrFetch(url,ms,cb){
   xhr.onerror=function(){ if(done)return; done=true; clearTimeout(tid); cb(new Error('Net'),null); };
   xhr.open('GET',url,true); xhr.send();
 }
-function mirror(url){
-  try{ const u=new URL(url); if(u.hostname!=='raw.githubusercontent.com')return null;
-    const p=u.pathname.split('/').filter(Boolean); if(p.length<4)return null;
+function mirrorUrl(url){
+  try{
+    const u=new URL(url);
+    if(u.hostname!=='raw.githubusercontent.com') return null;
+    const p=u.pathname.split('/').filter(Boolean); if(p.length<4) return null;
     return 'https://cdn.jsdelivr.net/gh/'+p[0]+'/'+p[1]+'@'+p[2]+'/'+p.slice(3).join('/');
-  }catch(e){return null;}
+  }catch(e){ return null; }
 }
 
 /* ── Load playlist ───────────────────────────────────────── */
 function loadPlaylist(urlOv){
+  cancelPreview();
   if(plIdx===FAV_IDX&&!urlOv){ showFavourites(); return; }
   const url=urlOv||PLAYLISTS[plIdx].url;
   setStatus('Loading…','loading'); startLoadBar();
   xhrFetch(url,25000,(err,text)=>{
     if(err){
-      const m=mirror(url);
+      const m=mirrorUrl(url);
       if(m){ setStatus('Retrying…','loading'); xhrFetch(m,25000,(e2,t2)=>{ finishLoadBar(); e2?setStatus('Failed','error'):onLoaded(t2); }); }
-      else { finishLoadBar(); setStatus('Failed','error'); }
+      else{ finishLoadBar(); setStatus('Failed','error'); }
       return;
     }
     finishLoadBar(); onLoaded(text);
@@ -326,34 +346,62 @@ function onLoaded(text){
   setFocus('list');
 }
 
-/* ── Aspect ratio ────────────────────────────────────────── */
-function cycleAR(){
-  /* remove all ar classes */
-  video.classList.remove('ar-fill','ar-cover','ar-wide');
-  arIdx=(arIdx+1)%AR_MODES.length;
-  const m=AR_MODES[arIdx];
-  if(m.cls) video.classList.add(m.cls);
-  arBtn.textContent=m.label;
-  arBtn.className='ar-btn '+m.cls;
-  showToast('Aspect: '+m.label.replace('⛶ ',''));
-}
-arBtn.addEventListener('click',cycleAR);
+/* ================================================================
+   PREVIEW SYSTEM
+   – schedulePreview() is called on every navigation move
+   – Waits PREVIEW_DELAY ms before starting the stream
+   – cancelPreview() is called on fast scroll to abort cleanly
+   – destroyHLS() fully tears down HLS before starting new stream
+   – Prevents crash: we never start a new stream until the old
+     one is fully destroyed
+   ================================================================ */
+let previewLock = false;  // true while HLS is mid-destroy
 
-/* ── Playback ────────────────────────────────────────────── */
-function playSelected(){
+function cancelPreview(){
+  clearTimeout(previewTimer);
+  previewTimer=null;
+}
+
+function destroyHLS(){
+  if(!hls) return;
+  try{ hls.destroy(); }catch(e){}
+  hls=null;
+}
+
+function schedulePreview(){
+  cancelPreview();
+  previewTimer=setTimeout(()=>{
+    previewTimer=null;
+    if(previewLock) return;   // safety: don't start while tearing down
+    startPreview(selectedIndex);
+  }, PREVIEW_DELAY);
+}
+
+function startPreview(idx){
   if(!filtered.length) return;
-  const ch=filtered[selectedIndex]; if(!ch) return;
+  const ch=filtered[idx]; if(!ch) return;
+
   nowPlayingEl.textContent=ch.name;
-  npChNumEl.textContent='CH '+(selectedIndex+1);
+  npChNumEl.textContent='CH '+(idx+1);
   videoOverlay.classList.add('hidden');
-  hasPlayed=true; setStatus('Buffering…','loading'); startLoadBar();
+  hasPlayed=true;
+  setStatus('Buffering…','loading');
+  startLoadBar();
+
+  previewLock=true;
+  destroyHLS();
+  video.removeAttribute('src');
+  video.load();
+  previewLock=false;
+
+  const url=ch.url;
+  const isHLS=/\.m3u8($|\?)/i.test(url)||url.toLowerCase().includes('m3u8');
+
   try{
-    if(hls){ hls.destroy(); hls=null; }
-    video.removeAttribute('src'); video.load();
-    const url=ch.url;
-    const isHLS=/\.m3u8($|\?)/i.test(url)||url.toLowerCase().includes('m3u8');
     if(isHLS){
-      if(video.canPlayType('application/vnd.apple.mpegurl')&&!window.Hls){ video.src=url; video.play().catch(()=>{}); return; }
+      if(video.canPlayType('application/vnd.apple.mpegurl')&&!window.Hls){
+        video.src=url; video.play().catch(()=>{}); return;
+      }
       if(window.Hls&&window.Hls.isSupported()){
         hls=new window.Hls(HLS_CFG);
         hls.on(window.Hls.Events.MANIFEST_PARSED,()=>{ video.play().catch(()=>{}); });
@@ -361,9 +409,11 @@ function playSelected(){
           if(!d.fatal) return;
           if(d.type===window.Hls.ErrorTypes.NETWORK_ERROR){ setStatus('Net error','error'); hls.startLoad(); }
           else if(d.type===window.Hls.ErrorTypes.MEDIA_ERROR){ setStatus('Recovering…','loading'); hls.recoverMediaError(); }
-          else{ setStatus('Stream error','error'); finishLoadBar(); hls.destroy(); hls=null; }
+          else{ setStatus('Stream error','error'); finishLoadBar(); destroyHLS(); }
         });
-        hls.loadSource(url); hls.attachMedia(video); return;
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        return;
       }
       setStatus('HLS unsupported','error'); return;
     }
@@ -371,14 +421,38 @@ function playSelected(){
   }catch(e){ finishLoadBar(); setStatus('Play error','error'); }
 }
 
+// Keep playSelected as alias (used by ENTER key for immediate play)
+function playSelected(){ cancelPreview(); startPreview(selectedIndex); }
+
+/* ── Aspect ratio ────────────────────────────────────────── */
+function cycleAR(){
+  video.classList.remove('ar-fill','ar-cover','ar-wide');
+  arIdx=(arIdx+1)%AR_MODES.length;
+  const m=AR_MODES[arIdx];
+  if(m.cls) video.classList.add(m.cls);
+  arBtn.textContent='⛶ '+m.label;
+  arBtn.className='ar-btn'+(m.cls?' '+m.cls:'');
+  showToast('Aspect: '+m.label);
+}
+arBtn.addEventListener('click',cycleAR);
+
+function setARFocus(on){
+  arBtn.classList.toggle('focused',on);
+}
+
 /* ── Navigation ──────────────────────────────────────────── */
 function moveSel(d){
   if(!filtered.length) return;
+  cancelPreview();   // kill pending preview immediately on move
   selectedIndex=Math.max(0,Math.min(filtered.length-1,selectedIndex+d));
-  VS.scrollToIndex(selectedIndex); VS.refresh();
+  VS.scrollToIndex(selectedIndex);
+  VS.refresh();
+  schedulePreview(); // restart debounce timer
 }
+
 function setFocus(a){
   focusArea=a;
+  setARFocus(a==='ar');
   if(a==='search'){ searchWrap.classList.add('active'); searchInput.focus(); }
   else{ searchWrap.classList.remove('active'); if(document.activeElement===searchInput) searchInput.blur(); }
 }
@@ -391,16 +465,30 @@ function switchTab(idx){
 }
 tabBar.querySelectorAll('.tab').forEach((b,i)=>b.addEventListener('click',()=>switchTab(i)));
 
-/* ── Number dial ─────────────────────────────────────────── */
+/* ── Number dial (highlight only, ENTER to play) ─────────── */
 function handleDigit(d){
   clearTimeout(dialTimer);
-  dialBuffer+=d; chDialerNum.textContent=dialBuffer; chDialer.classList.add('visible');
+  dialBuffer+=d;
+  chDialerNum.textContent=dialBuffer;
+  chDialer.classList.add('visible');
+
   dialTimer=setTimeout(()=>{
-    const num=parseInt(dialBuffer,10); dialBuffer=''; chDialer.classList.remove('visible');
+    const num=parseInt(dialBuffer,10);
+    dialBuffer='';
+    chDialer.classList.remove('visible');
     if(!filtered.length) return;
+    // Just highlight the channel — user presses ENTER to play
     const idx=Math.max(0,Math.min(filtered.length-1,num-1));
-    selectedIndex=idx; VS.scrollToIndex(idx); VS.refresh();
-    playSelected(); setTimeout(()=>{ if(hasPlayed) enterFS(); },600);
+    cancelPreview();
+    selectedIndex=idx;
+    VS.scrollToIndex(idx);
+    VS.refresh();
+    // Show channel info but don't start stream yet
+    const ch=filtered[idx];
+    if(ch){
+      nowPlayingEl.textContent=ch.name;
+      npChNumEl.textContent='CH '+(idx+1);
+    }
   },1500);
 }
 
@@ -445,61 +533,72 @@ video.addEventListener('error',  ()=>{ setStatus('Error','error'); finishLoadBar
 window.addEventListener('keydown',e=>{
   const k=e.key, c=e.keyCode;
 
-  /* digits */
+  /* digits — highlight channel, don't play yet */
   if((c>=48&&c<=57)||(c>=96&&c<=105)){
     if(focusArea!=='search'){ handleDigit(String(c>=96?c-96:c-48)); e.preventDefault(); return; }
   }
 
-  /* back */
+  /* back/escape */
   if(k==='Escape'||k==='Back'||k==='GoBack'||c===10009||c===27){
     if(isFullscreen){ exitFS(); e.preventDefault(); return; }
+    if(focusArea==='ar'){ setFocus('list'); e.preventDefault(); return; }
     if(focusArea==='search'){ clearSearch(); e.preventDefault(); return; }
     try{ if(window.tizen) tizen.application.getCurrentApplication().exit(); }catch(e){}
     e.preventDefault(); return;
   }
 
-  /* search mode */
+  /* ── AR focus mode ──────────────────────────────────────── */
+  if(focusArea==='ar'){
+    if(k==='Enter'||c===13){ cycleAR(); e.preventDefault(); return; }
+    if(k==='ArrowLeft'||c===37||k==='ArrowDown'||c===40){ setFocus('list'); e.preventDefault(); return; }
+    if(k==='ArrowRight'||c===39||k==='ArrowUp'||c===38){ cycleAR(); e.preventDefault(); return; }
+    e.preventDefault(); return;
+  }
+
+  /* ── Search mode ────────────────────────────────────────── */
   if(focusArea==='search'){
     if(k==='Enter'||c===13){ commitSearch(); e.preventDefault(); return; }
     if(k==='ArrowDown'||k==='ArrowUp'||c===40||c===38){ commitSearch(); }
     else return;
   }
 
-  /* arrows */
+  /* ── List / normal mode ─────────────────────────────────── */
   if(k==='ArrowUp'   ||c===38){ isFullscreen?showFsHint():moveSel(-1); e.preventDefault(); return; }
   if(k==='ArrowDown' ||c===40){ isFullscreen?showFsHint():moveSel(1);  e.preventDefault(); return; }
   if(k==='ArrowLeft' ||c===37){ isFullscreen?exitFS():setFocus('list'); e.preventDefault(); return; }
-  if(k==='ArrowRight'||c===39){ if(!isFullscreen&&hasPlayed) enterFS(); e.preventDefault(); return; }
+  if(k==='ArrowRight'||c===39){
+    if(isFullscreen){ showFsHint(); e.preventDefault(); return; }
+    /* Right arrow = focus AR button on player */
+    setFocus('ar'); e.preventDefault(); return;
+  }
 
-  /* enter */
+  /* enter = play selected immediately */
   if(k==='Enter'||c===13){
     if(isFullscreen){ exitFS(); e.preventDefault(); return; }
-    if(focusArea==='list'){ playSelected(); setTimeout(()=>{ if(hasPlayed) enterFS(); },600); }
+    if(focusArea==='list'){
+      playSelected();
+      setTimeout(()=>{ if(hasPlayed) enterFS(); },600);
+    }
     e.preventDefault(); return;
   }
 
-  /* page */
   if(k==='PageUp')  { moveSel(-10); e.preventDefault(); return; }
   if(k==='PageDown'){ moveSel(10);  e.preventDefault(); return; }
 
-  /* media */
+  /* media keys */
   if(k==='MediaPlayPause'  ||c===10252){ video.paused?video.play().catch(()=>{}):video.pause(); e.preventDefault(); return; }
   if(k==='MediaPlay'       ||c===415)  { video.play().catch(()=>{}); e.preventDefault(); return; }
   if(k==='MediaPause'      ||c===19)   { video.pause(); e.preventDefault(); return; }
-  if(k==='MediaStop'       ||c===413)  { if(hls){hls.destroy();hls=null;} video.pause(); video.removeAttribute('src'); video.load(); setStatus('Stopped','idle'); finishLoadBar(); e.preventDefault(); return; }
-  if(k==='MediaFastForward'||c===417)  { moveSel(1);  playSelected(); e.preventDefault(); return; }
-  if(k==='MediaRewind'     ||c===412)  { moveSel(-1); playSelected(); e.preventDefault(); return; }
-  if(k==='ChannelUp'       ||c===427)  { moveSel(1);  playSelected(); e.preventDefault(); return; }
-  if(k==='ChannelDown'     ||c===428)  { moveSel(-1); playSelected(); e.preventDefault(); return; }
+  if(k==='MediaStop'       ||c===413)  { cancelPreview(); destroyHLS(); video.pause(); video.removeAttribute('src'); video.load(); setStatus('Stopped','idle'); finishLoadBar(); e.preventDefault(); return; }
+  if(k==='MediaFastForward'||c===417)  { moveSel(1);  e.preventDefault(); return; }
+  if(k==='MediaRewind'     ||c===412)  { moveSel(-1); e.preventDefault(); return; }
+  if(k==='ChannelUp'       ||c===427)  { moveSel(1);  e.preventDefault(); return; }
+  if(k==='ChannelDown'     ||c===428)  { moveSel(-1); e.preventDefault(); return; }
 
   /* colour buttons */
-  /* RED = cycle playlist tab */
   if(k==='ColorF0Red'   ||c===403){ switchTab((plIdx+1)%(PLAYLISTS.length+1)); e.preventDefault(); return; }
-  /* GREEN = toggle favourite */
   if(k==='ColorF1Green' ||c===404){ if(filtered.length&&focusArea==='list') toggleFav(filtered[selectedIndex]); e.preventDefault(); return; }
-  /* YELLOW = search */
   if(k==='ColorF2Yellow'||c===405){ setFocus('search'); e.preventDefault(); return; }
-  /* BLUE = fullscreen */
   if(k==='ColorF3Blue'  ||c===406){ if(hasPlayed) toggleFS(); e.preventDefault(); return; }
 });
 
