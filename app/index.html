@@ -7,12 +7,33 @@
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <div class="app" id="app">
+
+  <!-- ════════════════════════════════════════════════
+       SPLASH SCREEN  (YouTube TV style)
+       Fades out once playlist is ready
+       ════════════════════════════════════════════════ -->
+  <div id="splash">
+    <div class="splash-inner">
+      <div class="splash-logo">
+        <span class="splash-icon">▶</span>
+        <span class="splash-wordmark">IPTV</span>
+      </div>
+      <div class="splash-bar-wrap">
+        <div class="splash-bar" id="splashBar"></div>
+      </div>
+      <div class="splash-sub" id="splashSub">Loading playlist…</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       MAIN APP  (hidden until splash exits)
+       ════════════════════════════════════════════════ -->
+  <div class="app" id="app" style="opacity:0;pointer-events:none;">
 
     <aside class="sidebar" id="sidebar">
 
-      <!-- Brand: PRO removed -->
       <div class="brand">
+        <span class="splash-icon brand-icon">▶</span>
         <span class="brand-title">IPTV</span>
       </div>
 
@@ -21,7 +42,7 @@
           <circle cx="11" cy="11" r="8"/>
           <line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <input id="searchInput" type="text" placeholder="Search channels..." spellcheck="false" autocomplete="off" />
+        <input id="searchInput" type="text" placeholder="Search channels…" spellcheck="false" autocomplete="off" />
       </div>
 
       <div class="tab-bar" id="tabBar">
@@ -36,8 +57,12 @@
         <span id="countBadge">0</span>
       </div>
 
-      <!-- Virtual-scroll container: JS manages children -->
       <ul id="channelList"></ul>
+
+      <!-- Remote number dialer overlay -->
+      <div class="ch-dialer" id="chDialer">
+        <span id="chDialerNum"></span>
+      </div>
 
       <div class="hint-bar">
         <span class="hint-item"><span class="dot red"></span>Reload</span>
@@ -52,6 +77,7 @@
 
       <div class="player-header">
         <div class="np-info">
+          <div class="np-ch-num" id="npChNum"></div>
           <h2 id="nowPlaying">Select a channel</h2>
           <span id="nowGroup"></span>
         </div>
@@ -62,7 +88,7 @@
         <video id="video" autoplay playsinline webkit-playsinline></video>
         <div class="video-overlay" id="videoOverlay">
           <div class="overlay-icon">▶</div>
-          <p class="overlay-hint">Select a channel to play<br><span>ENTER for fullscreen</span></p>
+          <p class="overlay-hint">Select a channel to play<br><span>ENTER · fullscreen</span></p>
         </div>
         <div class="fs-hint" id="fsHint">Press BACK or ← to exit fullscreen</div>
       </div>
@@ -70,10 +96,8 @@
       <div class="load-bar" id="loadBar"></div>
 
     </main>
-
   </div>
 
-  <!-- Local HLS.js library -->
   <script src="./hls.min.js"></script>
   <script src="./app.js"></script>
 </body>
