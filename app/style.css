@@ -38,80 +38,7 @@ html, body {
   -webkit-transform: translateZ(0);
 }
 
-/* ══════════════════════════════════════════════════════════════
-   SPLASH  —  YouTube TV style
-   Full-screen red-to-dark gradient, centred logo + progress bar
-   ══════════════════════════════════════════════════════════════ */
-#splash {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: #0f0f0f;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* fade-out driven by JS adding .done */
-  transition: opacity 0.55s ease;
-  will-change: opacity;
-}
-#splash.done { opacity: 0; pointer-events: none; }
-
-.splash-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 36px;
-}
-
-.splash-logo {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-
-.splash-icon {
-  font-size: 52px;
-  color: var(--accent);
-  line-height: 1;
-  /* subtle pulse */
-  animation: splash-pulse 1.8s ease-in-out infinite;
-}
-@keyframes splash-pulse {
-  0%,100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: .75; transform: scale(0.93); }
-}
-
-.splash-wordmark {
-  font-family: var(--font-title);
-  font-size: 72px;
-  font-weight: 900;
-  letter-spacing: 14px;
-  color: #fff;
-  text-transform: uppercase;
-  line-height: 1;
-}
-
-.splash-bar-wrap {
-  width: 220px;
-  height: 3px;
-  background: #222;
-  border-radius: 3px;
-  overflow: hidden;
-}
-.splash-bar {
-  height: 100%;
-  width: 0%;
-  background: var(--accent);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-  will-change: width;
-}
-
-.splash-sub {
-  font-size: 14px;
-  color: #555;
-  letter-spacing: 1px;
-}
+/* (splash removed) */
 
 /* ══════════════════════════════════════════════════════════════
    MAIN APP LAYOUT
@@ -122,8 +49,6 @@ html, body {
   height: 100vh;
   width: 100vw;
   contain: strict;
-  transition: opacity 0.4s ease;
-  will-change: opacity;
 }
 
 /* ── Sidebar ─────────────────────────────────────────────── */
@@ -141,25 +66,26 @@ html, body {
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 0 18px 16px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 14px;
 }
 .brand-icon {
-  font-size: 22px;
+  font-size: 20px;
   color: var(--accent);
-  animation: none;          /* no pulse in sidebar */
   line-height: 1;
 }
 .brand-title {
   font-family: var(--font-title);
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 900;
-  letter-spacing: 6px;
+  letter-spacing: 10px;
   color: #fff;
   text-transform: uppercase;
   line-height: 1;
+  /* Extra bold stroke via text-shadow for Samsung TV rendering */
+  text-shadow: 0 0 0 #fff, 1px 0 0 #fff;
 }
 
 /* Search */
@@ -234,6 +160,10 @@ html, body {
 }
 .tab:hover { border-color: #444; color: var(--text); }
 .tab.active { background: #fff; color: #000; border-color: #fff; }
+/* Favourites tab — gold accent */
+.tab.fav-tab { border-color: #443a00; color: #a08000; }
+.tab.fav-tab:hover { border-color: #665800; color: #c9a800; }
+.tab.fav-tab.active { background: #f0c400; color: #000; border-color: #f0c400; }
 
 /* List header */
 .list-head {
@@ -324,7 +254,7 @@ html, body {
 .ch-info { flex: 1; min-width: 0; }
 .ch-name {
   font-family: var(--font-body);
-  font-size: 17px;           /* prominent — matches player heading scale */
+  font-size: 17px;
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
@@ -333,8 +263,17 @@ html, body {
   letter-spacing: 0.1px;
   line-height: 1;
 }
-/* ch-group is rendered in JS but hidden via CSS — no layout cost */
 .ch-group { display: none; }
+
+/* Favourite star */
+.ch-fav-star {
+  font-size: 13px;
+  color: #f0c400;
+  flex-shrink: 0;
+  margin-right: 2px;
+  line-height: 1;
+}
+#channelList li.active .ch-fav-star { color: #b08800; }
 
 /* Channel number badge */
 .ch-num {
@@ -394,6 +333,7 @@ html, body {
 .dot.green  { background: #00b259; }
 .dot.yellow { background: #e5b400; }
 .dot.blue   { background: #0052e5; }
+.fav-dot { font-size: 11px; color: #f0c400; line-height: 1; }
 
 /* ── Player area ─────────────────────────────────────────── */
 .player-area {

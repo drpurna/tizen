@@ -26,20 +26,16 @@ const videoWrap     = document.getElementById('videoWrap');
 const videoOverlay  = document.getElementById('videoOverlay');
 const fsHint        = document.getElementById('fsHint');
 const loadBar       = document.getElementById('loadBar');
-const splash        = document.getElementById('splash');
-const splashBar     = document.getElementById('splashBar');
-const splashSub     = document.getElementById('splashSub');
-const appEl         = document.getElementById('app');
 const chDialer      = document.getElementById('chDialer');
 const chDialerNum   = document.getElementById('chDialerNum');
 
-/* ── Playlists ───────────────────────────────────────────── */
+/* ── Playlists (index 0=Telugu, 1=India; 2=Favourites handled locally) ── */
 const PLAYLISTS = [
   { name: 'Telugu', url: 'https://iptv-org.github.io/iptv/languages/tel.m3u' },
   { name: 'India',  url: 'https://iptv-org.github.io/iptv/countries/in.m3u'  },
-  { name: 'Sports', url: 'https://iptv-org.github.io/iptv/categories/sports.m3u' },
-  { name: 'Movies', url: 'https://iptv-org.github.io/iptv/categories/movies.m3u' },
 ];
+const FAV_TAB_IDX  = 2;   // Favourites is always tab index 2
+const FAV_STORE_KEY = 'iptv:favs';
 
 /* ── HLS config ──────────────────────────────────────────── */
 const HLS_CONFIG = {
@@ -54,7 +50,8 @@ const HLS_CONFIG = {
 };
 
 /* ── State ───────────────────────────────────────────────── */
-let channels      = [];
+let channels      = [];    // channels for current playlist tab
+let allChannels   = [];    // union of all loaded channels (for fav lookup)
 let filtered      = [];
 let selectedIndex = 0;
 let focusArea     = 'list';   // 'list' | 'search'
@@ -75,25 +72,76 @@ try {
   if (s) plIdx = Math.min(parseInt(s, 10) || 0, PLAYLISTS.length - 1);
 } catch(_) {}
 
+loadFavs();
+
 /* ══════════════════════════════════════════════════════════
-   SPLASH
+   FAVOURITES  — persisted to localStorage
    ══════════════════════════════════════════════════════════ */
-function splashProgress(pct, msg) {
-  splashBar.style.width = pct + '%';
-  if (msg) splashSub.textContent = msg;
+let favSet = new Set();   // Set of channel URLs
+
+function loadFavs() {
+  try {
+    const raw = localStorage.getItem(FAV_STORE_KEY);
+    if (raw) favSet = new Set(JSON.parse(raw));
+  } catch(_) { favSet = new Set(); }
 }
 
-function splashDone() {
-  splashProgress(100, 'Ready');
-  setTimeout(() => {
-    splash.classList.add('done');
-    appEl.style.opacity = '1';
-    appEl.style.pointerEvents = '';
-    /* remove splash from DOM after fade */
-    setTimeout(() => {
-      if (splash.parentNode) splash.parentNode.removeChild(splash);
-    }, 600);
-  }, 300);
+function saveFavs() {
+  try { localStorage.setItem(FAV_STORE_KEY, JSON.stringify([...favSet])); } catch(_) {}
+}
+
+function isFav(ch) { return favSet.has(ch.url); }
+
+function toggleFav(ch) {
+  if (favSet.has(ch.url)) {
+    favSet.delete(ch.url);
+  } else {
+    favSet.add(ch.url);
+  }
+  saveFavs();
+  /* If currently viewing favs tab, refresh list */
+  if (plIdx === FAV_TAB_IDX) showFavourites();
+  /* Update star on active row */
+  VS.refresh();
+  /* Show brief toast */
+  showToast(favSet.has(ch.url) ? '★ Added to Favourites' : '✕ Removed from Favourites');
+}
+
+function getFavChannels() {
+  /* Return all channels from all loaded playlists that are favourited */
+  return allChannels.filter(ch => favSet.has(ch.url));
+}
+
+function showFavourites() {
+  const favs = getFavChannels();
+  filtered      = favs;
+  selectedIndex = 0;
+  renderList();
+  setStatus(favs.length ? favs.length + ' favourites' : 'No favourites yet', 'idle');
+}
+
+/* ── Toast notification ──────────────────────────────────── */
+let toastTimer = null;
+function showToast(msg) {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.style.cssText = [
+      'position:fixed', 'bottom:40px', 'left:50%',
+      'transform:translateX(-50%)',
+      'background:rgba(0,0,0,0.88)', 'border:1px solid #333',
+      'color:#fff', 'font-size:14px', 'font-weight:600',
+      'padding:10px 24px', 'border-radius:24px',
+      'z-index:9999', 'pointer-events:none',
+      'transition:opacity 0.25s ease', 'letter-spacing:0.5px',
+    ].join(';');
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -276,6 +324,7 @@ const VS = {
 
     li.innerHTML = logoHtml
       + '<div class="ch-info"><div class="ch-name">' + esc(ch.name) + '</div></div>'
+      + (isFav(ch) ? '<span class="ch-fav-star">★</span>' : '')
       + '<div class="ch-num">' + (i + 1) + '</div>';
 
     // cache hot child refs to avoid querySelector on every paint
@@ -390,26 +439,29 @@ function githubMirror(url) {
 }
 
 function loadPlaylist(urlOverride) {
+  /* Favourites tab: show from local store, no network fetch */
+  if (plIdx === FAV_TAB_IDX && !urlOverride) {
+    showFavourites();
+    return;
+  }
+
   const url = urlOverride || PLAYLISTS[plIdx].url;
   setStatus('Loading…', 'loading');
   startLoadBar();
-  splashProgress(20, 'Fetching playlist…');
 
   xhrFetch(url, 25000, (err, text) => {
     if (err) {
       const mirror = githubMirror(url);
       if (mirror) {
         setStatus('Retrying…', 'loading');
-        splashProgress(40, 'Trying mirror…');
         xhrFetch(mirror, 25000, (err2, text2) => {
           finishLoadBar();
-          if (err2) { setStatus('Failed', 'error'); splashProgress(100, 'Failed'); return; }
+          if (err2) { setStatus('Failed', 'error'); return; }
           onLoaded(text2);
         });
       } else {
         finishLoadBar();
         setStatus('Failed', 'error');
-        splashProgress(100, 'Failed to load');
       }
       return;
     }
@@ -419,15 +471,16 @@ function loadPlaylist(urlOverride) {
 }
 
 function onLoaded(text) {
-  splashProgress(80, 'Building channel list…');
   channels      = parseM3U(text);
+  /* merge into allChannels for fav lookups (dedupe by url) */
+  const urlsSeen = new Set(allChannels.map(c => c.url));
+  channels.forEach(c => { if (!urlsSeen.has(c.url)) allChannels.push(c); });
   filtered      = channels.slice();
   selectedIndex = 0;
   renderList();
   try { localStorage.setItem(STORAGE_KEY, String(plIdx)); } catch(_) {}
   setStatus('Ready · ' + channels.length + ' ch', 'idle');
   setFocus('list');
-  splashDone();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -534,9 +587,6 @@ function handleDigit(d) {
   }, 1500);
 }
 
-/* ══════════════════════════════════════════════════════════
-   TAB SWITCH
-   ══════════════════════════════════════════════════════════ */
 function switchTab(idx) {
   plIdx = idx;
   document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === idx));
@@ -702,7 +752,16 @@ window.addEventListener('keydown', (e) => {
 
   /* ── Colour buttons ─────────────────────────────────────── */
   if (key === 'ColorF0Red'    || code === 403) { loadPlaylist(); e.preventDefault(); return; }
-  if (key === 'ColorF1Green'  || code === 404) { switchTab((plIdx + 1) % PLAYLISTS.length); e.preventDefault(); return; }
+  if (key === 'ColorF1Green'  || code === 404) {
+    /* Green = toggle favourite on selected channel */
+    if (filtered.length && focusArea === 'list') {
+      toggleFav(filtered[selectedIndex]);
+    } else {
+      /* fallback: cycle playlist tab */
+      switchTab((plIdx + 1) % (PLAYLISTS.length + 1));
+    }
+    e.preventDefault(); return;
+  }
   if (key === 'ColorF2Yellow' || code === 405) { setFocus('search'); e.preventDefault(); return; }
   if (key === 'ColorF3Blue'   || code === 406) { if (hasPlayed) toggleFullscreen(); e.preventDefault(); return; }
 });
