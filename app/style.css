@@ -1,25 +1,23 @@
 /* ================================================================
-   IPTV PRO — style.css  — Premium TizenBrew Theme
+   IPTV PRO — style.css — Samsung TV / TizenBrew
+   No external fonts. Uses Samsung built-in font stack only.
    ================================================================ */
-
-
 
 :root {
   --bg:        #0a0a0a;
-  --panel:     #121212;
-  --panel2:    #1a1a1a;
-  --border:    #242424;
-  --active:    #ffffff;
+  --panel:     #111111;
+  --panel2:    #191919;
+  --border:    #222222;
   --text:      #f0f0f0;
-  --muted:     #666;
-  --sub:       #999;
+  --muted:     #555555;
+  --sub:       #888888;
   --accent:    #e50000;
-  --accent2:   #ff4444;
   --hi:        #ffffff;
   --radius:    10px;
   --sidebar-w: 380px;
-  --font-title: 'SamsungSharpSans-Bold', 'Arial Black', 'Arial Narrow', Arial, sans-serif;
-  --font-body: 'SamsungOne', Arial, sans-serif;
+  /* Samsung TV built-in fonts — zero network load */
+  --font-title: 'SamsungSharpSans-Bold', 'Samsung Sharp Sans', 'Arial Black', 'Arial Narrow', Arial, sans-serif;
+  --font-body:  'SamsungOne', 'Samsung One', Arial, sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -31,10 +29,9 @@ html, body {
   color: var(--text);
   font-family: var(--font-body);
   font-size: 15px;
-  -webkit-font-smoothing: antialiased;
 }
 
-/* ── Layout ──────────────────────────────────────────── */
+/* ── Layout ──────────────────────────────────────────────── */
 .app {
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr;
@@ -42,45 +39,45 @@ html, body {
   width: 100vw;
 }
 
-/* ── Sidebar ─────────────────────────────────────────── */
+/* ── Sidebar ─────────────────────────────────────────────── */
 .sidebar {
   background: var(--panel);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 16px 0 0;
+  padding: 18px 0 0;
 }
 
 /* Brand */
 .brand {
   display: flex;
   align-items: baseline;
-  gap: 6px;
-  padding: 0 16px 14px;
+  gap: 8px;
+  padding: 0 16px 16px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 14px;
 }
 .brand-title {
   font-family: var(--font-title);
-  font-size: 38px;
+  font-size: 42px;
   font-weight: 900;
-  letter-spacing: 6px;
+  letter-spacing: 8px;
   color: #fff;
   text-transform: uppercase;
   line-height: 1;
 }
-.brand-ver {
+.brand-pro {
   font-family: var(--font-title);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 3px;
   color: var(--accent);
-  text-transform: uppercase;
-  padding: 2px 6px;
   border: 2px solid var(--accent);
   border-radius: 4px;
+  padding: 2px 6px;
   line-height: 1.4;
+  text-transform: uppercase;
 }
 
 /* Search */
@@ -109,16 +106,11 @@ html, body {
   font-size: 14px;
   font-family: var(--font-body);
   outline: none;
-  transition: border-color .15s;
 }
-#searchInput:focus,
-#searchInput.focused {
-  border-color: #444;
-  background: #1e1e1e;
-}
+#searchInput:focus { border-color: #444; background: #1c1c1c; }
 #searchInput::placeholder { color: var(--muted); }
 
-/* Playlist tabs */
+/* Tabs */
 .tab-bar {
   display: flex;
   gap: 6px;
@@ -142,19 +134,10 @@ html, body {
   text-transform: uppercase;
   cursor: pointer;
   outline: none;
-  transition: all .15s;
   white-space: nowrap;
 }
-.tab:hover,
-.tab.focused {
-  border-color: #555;
-  color: var(--text);
-}
-.tab.active {
-  background: var(--active);
-  color: #000;
-  border-color: var(--active);
-}
+.tab:focus, .tab:hover { border-color: #444; color: var(--text); }
+.tab.active { background: #fff; color: #000; border-color: #fff; }
 
 /* List header */
 .list-head {
@@ -187,10 +170,10 @@ html, body {
   overflow-x: hidden;
   padding: 0 8px;
   scrollbar-width: thin;
-  scrollbar-color: #2a2a2a transparent;
+  scrollbar-color: #222 transparent;
 }
 #channelList::-webkit-scrollbar { width: 3px; }
-#channelList::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+#channelList::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
 
 #channelList li {
   display: flex;
@@ -201,48 +184,33 @@ html, body {
   margin-bottom: 2px;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: background .1s;
 }
-#channelList li:hover {
-  background: var(--panel2);
-}
-#channelList li.focused {
-  background: #1e1e1e;
-  border-color: #333;
-}
-#channelList li.active {
-  background: #fff;
-  border-color: #fff;
-}
-#channelList li.active .ch-name { color: #000; }
+#channelList li:hover  { background: var(--panel2); }
+#channelList li.active { background: #fff; border-color: #fff; }
+#channelList li.active .ch-name  { color: #000; }
 #channelList li.active .ch-group { color: #555; }
-#channelList li.active .ch-num { color: #888; }
+#channelList li.active .ch-num   { color: #aaa; }
 
-/* Channel logo */
+/* Logo */
 .ch-logo {
   flex-shrink: 0;
   width: 36px;
   height: 36px;
   border-radius: 6px;
-  background: #1e1e1e;
-  border: 1px solid #2a2a2a;
+  background: #1a1a1a;
+  border: 1px solid #252525;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
 }
-.ch-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.ch-logo-fallback {
+.ch-logo img { width: 100%; height: 100%; object-fit: contain; }
+.ch-logo-fb {
   font-family: var(--font-title);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
-  color: #555;
+  color: #444;
   text-transform: uppercase;
-  letter-spacing: 0;
 }
 
 /* Channel text */
@@ -254,7 +222,6 @@ html, body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.3;
 }
 .ch-group {
   font-size: 11px;
@@ -266,7 +233,7 @@ html, body {
 }
 .ch-num {
   font-size: 11px;
-  color: #333;
+  color: #2a2a2a;
   font-family: var(--font-title);
   font-weight: 700;
   flex-shrink: 0;
@@ -275,10 +242,9 @@ html, body {
 /* Hint bar */
 .hint-bar {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   padding: 10px 16px;
   border-top: 1px solid var(--border);
-  margin-top: 4px;
   flex-shrink: 0;
 }
 .hint-item {
@@ -291,17 +257,15 @@ html, body {
   letter-spacing: .3px;
 }
 .dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  flex-shrink: 0;
+  width: 10px; height: 10px;
+  border-radius: 2px; flex-shrink: 0;
 }
 .dot.red    { background: #e5000e; }
 .dot.green  { background: #00b259; }
 .dot.yellow { background: #e5b400; }
 .dot.blue   { background: #0052e5; }
 
-/* ── Player area ─────────────────────────────────────── */
+/* ── Player area ─────────────────────────────────────────── */
 .player-area {
   display: flex;
   flex-direction: column;
@@ -309,7 +273,6 @@ html, body {
   gap: 10px;
   background: var(--bg);
   overflow: hidden;
-  position: relative;
 }
 
 .player-header {
@@ -320,16 +283,16 @@ html, body {
 }
 .np-info h2 {
   font-family: var(--font-title);
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 30px;
+  font-weight: 900;
   letter-spacing: 1px;
-  color: var(--hi);
+  color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 700px;
-  line-height: 1.1;
+  max-width: 680px;
   text-transform: uppercase;
+  line-height: 1.1;
 }
 #nowGroup {
   font-size: 12px;
@@ -347,18 +310,18 @@ html, body {
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
-  padding: 5px 12px;
+  padding: 5px 14px;
   border-radius: 20px;
   flex-shrink: 0;
   border: 1.5px solid;
 }
-.status-badge.idle    { color: var(--muted); border-color: #2a2a2a; background: transparent; }
+.status-badge.idle    { color: var(--muted); border-color: #222; }
 .status-badge.loading { color: #e5b400; border-color: #e5b40044; background: #e5b40011; }
 .status-badge.playing { color: #00c06a; border-color: #00c06a44; background: #00c06a11; }
+.status-badge.paused  { color: #888;    border-color: #33333388; }
 .status-badge.error   { color: var(--accent); border-color: #e5000e44; background: #e5000e11; }
-.status-badge.paused  { color: #aaa; border-color: #33333388; background: transparent; }
 
-/* Video wrap — side preview */
+/* Video */
 .video-wrap {
   flex: 1;
   position: relative;
@@ -368,14 +331,13 @@ html, body {
   border: 1px solid var(--border);
 }
 video {
-  width: 100%;
-  height: 100%;
+  width: 100%; height: 100%;
   display: block;
   background: #000;
   object-fit: contain;
 }
 
-/* Overlay (when no channel playing) */
+/* Overlay */
 .video-overlay {
   position: absolute;
   inset: 0;
@@ -383,37 +345,27 @@ video {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
   pointer-events: none;
   transition: opacity .3s;
 }
 .video-overlay.hidden { opacity: 0; }
-.overlay-icon {
-  font-size: 48px;
-  color: #2a2a2a;
-  line-height: 1;
-}
+.overlay-icon { font-size: 52px; color: #1e1e1e; }
 .overlay-hint {
-  font-size: 14px;
-  color: #333;
-  text-align: center;
-  line-height: 1.8;
+  font-size: 14px; color: #2a2a2a;
+  text-align: center; line-height: 1.9;
 }
-.overlay-hint span {
-  font-size: 12px;
-  color: #2a2a2a;
-}
+.overlay-hint span { font-size: 12px; color: #222; }
 
-/* Fullscreen exit hint */
+/* Fullscreen hint */
 .fs-hint {
   position: absolute;
-  bottom: 20px;
-  left: 50%;
+  bottom: 20px; left: 50%;
   transform: translateX(-50%);
-  background: rgba(0,0,0,.7);
-  color: #aaa;
+  background: rgba(0,0,0,.75);
+  color: #888;
   font-size: 12px;
-  padding: 6px 16px;
+  padding: 6px 18px;
   border-radius: 20px;
   pointer-events: none;
   opacity: 0;
@@ -429,19 +381,16 @@ video {
   background: linear-gradient(90deg, var(--accent), #ff6b6b);
   border-radius: 2px;
   width: 0%;
-  transition: width .4s ease, opacity .4s;
   opacity: 0;
+  transition: width .4s ease, opacity .3s;
   flex-shrink: 0;
 }
 .load-bar.active { opacity: 1; }
 
-/* ── FULLSCREEN ─────────────────────────────────────── */
+/* ── Fullscreen ──────────────────────────────────────────── */
 body.fullscreen .sidebar { display: none; }
 body.fullscreen .app { grid-template-columns: 1fr; }
-body.fullscreen .player-area {
-  padding: 0;
-  gap: 0;
-}
+body.fullscreen .player-area { padding: 0; gap: 0; }
 body.fullscreen .player-header { display: none; }
 body.fullscreen .load-bar { display: none; }
 body.fullscreen .video-wrap {
@@ -452,7 +401,5 @@ body.fullscreen .video-wrap {
   border: none;
 }
 body.fullscreen .fs-hint { z-index: 10000; }
-body.fullscreen .fs-hint.visible { opacity: 1; }
 
-/* ── Utility ────────────────────────────────────────── */
 * { outline: none; }
