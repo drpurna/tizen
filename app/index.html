@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IPTV</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>IPTV Pro</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
@@ -18,7 +19,8 @@
 
       <div class="search-wrap">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
         <input id="searchInput" type="text" placeholder="Search channels..." spellcheck="false" autocomplete="off" />
       </div>
@@ -59,10 +61,10 @@
       <div class="video-wrap" id="videoWrap">
         <video id="video" autoplay playsinline webkit-playsinline></video>
         <div class="video-overlay" id="videoOverlay">
-          <div class="overlay-icon">&#9654;</div>
+          <div class="overlay-icon">▶</div>
           <p class="overlay-hint">Select a channel to play<br><span>ENTER for fullscreen</span></p>
         </div>
-        <div class="fs-hint" id="fsHint">Press BACK or &#8592; to exit fullscreen</div>
+        <div class="fs-hint" id="fsHint">Press BACK or ← to exit fullscreen</div>
       </div>
 
       <div class="load-bar" id="loadBar"></div>
@@ -71,7 +73,7 @@
 
   </div>
 
-  <script src="./hls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
