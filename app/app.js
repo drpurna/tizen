@@ -1,5 +1,5 @@
 // ================================================================
-// IPTV — app.js v7.1  |  Shaka + splash + default cover
+// IPTV — app.js v8.0  |  Buffer cleanup + crash-proof loading
 // ================================================================
 
 (function checkShaka(){
@@ -27,7 +27,7 @@ const loadBar       = document.getElementById('loadBar');
 const chDialer      = document.getElementById('chDialer');
 const chDialerNum   = document.getElementById('chDialerNum');
 const arBtn         = document.getElementById('arBtn');
-const splashScreen  = document.getElementById('splashScreen'); // new
+const splashScreen  = document.getElementById('splashScreen');
 
 /* Playlists */
 const PLAYLISTS = [
@@ -37,28 +37,29 @@ const PLAYLISTS = [
 const FAV_IDX      = 2;
 const FAV_KEY      = 'iptv:favs';
 const PLAYLIST_KEY = 'iptv:lastPl';
+const CACHE_KEY    = 'iptv:playlistCache';   // store parsed channels per URL
 
-/* Shaka config (unchanged) */
+/* Shaka config with aggressive timeout and memory‑friendly buffer */
 const SHAKA_CFG = {
   streaming: {
-    bufferingGoal: 30,
-    rebufferingGoal: 20,
-    bufferBehind: 20,
+    bufferingGoal: 20,          // smaller buffer for faster channel switch
+    rebufferingGoal: 15,
+    bufferBehind: 15,
     retryParameters: {
-      maxAttempts: 3,
+      maxAttempts: 2,
       baseDelay: 500,
       backoffFactor: 2,
       fudgeFactor: 0.5,
-      timeout: 10000
+      timeout: 8000              // fail fast on dead streams
     }
   },
   manifest: {
     retryParameters: {
-      maxAttempts: 3,
+      maxAttempts: 2,
       baseDelay: 500,
       backoffFactor: 2,
       fudgeFactor: 0.5,
-      timeout: 10000
+      timeout: 8000
     }
   },
   abr: {
@@ -67,14 +68,14 @@ const SHAKA_CFG = {
   }
 };
 
-/* Aspect ratio modes — set default to cover (index 2) */
+/* Aspect ratio modes — default = cover (index 2) */
 const AR_MODES = [
   { cls:'',         label:'Fit'  },
   { cls:'ar-fill',  label:'Fill' },
-  { cls:'ar-cover', label:'Crop' }, // default
+  { cls:'ar-cover', label:'Crop' },
   { cls:'ar-wide',  label:'Wide' },
 ];
-let arIdx = 2; // ← default to CROP
+let arIdx = 2;
 
 /* State */
 let channels      = [];
@@ -92,8 +93,9 @@ let previewTimer  = null;
 const PREVIEW_DELAY = 700;
 let dialBuffer    = '';
 let dialTimer     = null;
+let currentXHR    = null;          // to abort pending playlist requests
 
-/* Favourites (unchanged) */
+/* ========== Favourites (unchanged) ========== */
 let favSet = new Set();
 (function(){
   try{ const r=localStorage.getItem(FAV_KEY); if(r) favSet=new Set(JSON.parse(r)); }catch(e){}
@@ -113,7 +115,7 @@ function showFavourites(){
   setStatus(filtered.length?filtered.length+' favourites':'No favourites yet','idle');
 }
 
-/* Toast */
+/* ========== Toast ========== */
 let toastEl=null,toastTm=null;
 function showToast(msg){
   if(!toastEl){ toastEl=document.createElement('div'); toastEl.id='toast'; document.body.appendChild(toastEl); }
@@ -121,7 +123,7 @@ function showToast(msg){
   clearTimeout(toastTm); toastTm=setTimeout(()=>{ toastEl.style.opacity='0'; },2200);
 }
 
-/* Status / load bar */
+/* ========== Status & load bar ========== */
 function setStatus(t,c){ statusBadge.textContent=t; statusBadge.className='status-badge '+(c||'idle'); }
 function startLoadBar(){
   clearTimeout(loadBarTimer); loadBar.style.width='0%'; loadBar.classList.add('active');
@@ -134,7 +136,7 @@ function finishLoadBar(){
   setTimeout(()=>{ loadBar.classList.remove('active'); loadBar.style.width='0%'; },400);
 }
 
-/* Clean name, parseM3U, esc, initials (unchanged) */
+/* ========== Clean name, M3U parser, helpers ========== */
 function cleanName(raw){
   return raw
     .replace(/\s*[\[(][^\]*)]*[\])]/g, '')
@@ -162,7 +164,7 @@ function parseM3U(text){
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function initials(n){ return n.replace(/[^a-zA-Z0-9]/g,' ').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?'; }
 
-/* Virtual scroll (unchanged) */
+/* ========== Virtual scroll (unchanged) ========== */
 const VS = {
   ITEM_H:  80,
   OVERSCAN: 6,
@@ -285,14 +287,20 @@ function commitSearch(){ setFocus('list'); if(filtered.length===1){ selectedInde
 function clearSearch(){ searchInput.value=''; applySearch(); setFocus('list'); }
 searchInput.addEventListener('input',applySearch);
 
-/* XHR */
-function xhrFetch(url,ms,cb){
+/* ========== XHR with timeout and abort ========== */
+function xhrFetch(url, ms, cb){
+  if(currentXHR) {
+    currentXHR.abort();
+    currentXHR = null;
+  }
   let done=false;
   const xhr=new XMLHttpRequest();
+  currentXHR = xhr;
   const tid=setTimeout(()=>{ if(done)return; done=true; xhr.abort(); cb(new Error('Timeout'),null); },ms);
-  xhr.onreadystatechange=function(){ if(xhr.readyState!==4||done)return; done=true; clearTimeout(tid); xhr.status>=200&&xhr.status<400?cb(null,xhr.responseText):cb(new Error('HTTP '+xhr.status),null); };
-  xhr.onerror=function(){ if(done)return; done=true; clearTimeout(tid); cb(new Error('Net'),null); };
-  xhr.open('GET',url,true); xhr.send();
+  xhr.onreadystatechange=function(){ if(xhr.readyState!==4||done)return; done=true; clearTimeout(tid); currentXHR=null; xhr.status>=200&&xhr.status<400?cb(null,xhr.responseText):cb(new Error('HTTP '+xhr.status),null); };
+  xhr.onerror=function(){ if(done)return; done=true; clearTimeout(tid); currentXHR=null; cb(new Error('Net'),null); };
+  xhr.open('GET',url,true);
+  xhr.send();
 }
 function mirrorUrl(url){
   try{
@@ -303,33 +311,62 @@ function mirrorUrl(url){
   }catch(e){ return null; }
 }
 
-/* Load playlist */
+/* ========== Playlist loading with cache ========== */
 function loadPlaylist(urlOv){
   cancelPreview();
   if(plIdx===FAV_IDX&&!urlOv){ showFavourites(); return; }
   const url=urlOv||PLAYLISTS[plIdx].url;
+
+  // Check cache first
+  const cached = localStorage.getItem(CACHE_KEY+'_'+url);
+  if(cached) {
+    try {
+      const data = JSON.parse(cached);
+      channels = data.channels;
+      filtered = channels.slice();
+      selectedIndex = 0;
+      renderList();
+      setStatus('Cached · '+channels.length+' ch','idle');
+    } catch(e) { /* ignore */ }
+  }
+
+  // Always refresh in background
   setStatus('Loading…','loading'); startLoadBar();
-  xhrFetch(url,25000,(err,text)=>{
+  xhrFetch(url,15000,(err,text)=>{
     if(err){
       const m=mirrorUrl(url);
-      if(m){ setStatus('Retrying…','loading'); xhrFetch(m,25000,(e2,t2)=>{ finishLoadBar(); e2?setStatus('Failed','error'):onLoaded(t2); }); }
+      if(m){ setStatus('Retrying…','loading'); xhrFetch(m,15000,(e2,t2)=>{ finishLoadBar(); if(e2){ setStatus('Failed','error'); } else { onLoaded(t2,url); } }); }
       else{ finishLoadBar(); setStatus('Failed','error'); }
       return;
     }
-    finishLoadBar(); onLoaded(text);
+    finishLoadBar();
+    onLoaded(text,url);
   });
 }
-function onLoaded(text){
-  channels=parseM3U(text);
-  const seen=new Set(allChannels.map(c=>c.url));
-  channels.forEach(c=>{ if(!seen.has(c.url)) allChannels.push(c); });
-  filtered=channels.slice(); selectedIndex=0; renderList();
-  try{ localStorage.setItem(PLAYLIST_KEY,String(plIdx)); }catch(e){}
-  setStatus('Ready · '+channels.length+' ch','idle');
-  setFocus('list');
+function onLoaded(text,url){
+  try {
+    const newChannels = parseM3U(text);
+    // Merge new channels into allChannels (avoid duplicates)
+    const seen=new Set(allChannels.map(c=>c.url));
+    newChannels.forEach(c=>{ if(!seen.has(c.url)) allChannels.push(c); });
+    channels = newChannels;
+    filtered = channels.slice();
+    selectedIndex = 0;
+    renderList();
+    // Cache the parsed channels for this URL
+    try {
+      localStorage.setItem(CACHE_KEY+'_'+url, JSON.stringify({ channels: newChannels }));
+    } catch(e) {}
+    try{ localStorage.setItem(PLAYLIST_KEY,String(plIdx)); }catch(e){}
+    setStatus('Ready · '+channels.length+' ch','idle');
+    setFocus('list');
+  } catch(e) {
+    console.error('Parse error', e);
+    setStatus('Parse error','error');
+  }
 }
 
-/* Shaka integration */
+/* ========== Shaka Player with buffer cleanup ========== */
 let previewLock = false;
 
 function cancelPreview(){
@@ -339,10 +376,15 @@ function cancelPreview(){
 
 function destroyPlayer(){
   if(!shakaPlayer) return;
-  try { shakaPlayer.destroy(); } catch(e) {}
+  try {
+    shakaPlayer.destroy();               // clean up shaka resources
+  } catch(e) {}
   shakaPlayer = null;
+  // Force buffer cleanup
+  video.pause();
   video.removeAttribute('src');
-  video.load();
+  video.load();                         // clears any lingering buffer
+  video.currentTime = 0;
 }
 
 function schedulePreview(){
@@ -358,10 +400,8 @@ function startPreview(idx){
   if(!filtered.length) return;
   const ch=filtered[idx]; if(!ch) return;
 
-  // hide splash screen immediately on first channel selection
-  if(splashScreen && !hasPlayed) {
-    splashScreen.classList.add('hide');
-  }
+  // Hide splash
+  if(splashScreen && !hasPlayed) splashScreen.classList.add('hide');
 
   nowPlayingEl.textContent=ch.name;
   npChNumEl.textContent='CH '+(idx+1);
@@ -371,11 +411,12 @@ function startPreview(idx){
   startLoadBar();
 
   previewLock=true;
-  destroyPlayer();
+  destroyPlayer();                     // ← releases previous buffer
   previewLock=false;
 
   const url=ch.url;
 
+  // Fallback to native HLS (Safari) if Shaka not supported
   if(!window.shaka || !shaka.Player.isBrowserSupported()) {
     if(video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src=url;
@@ -390,15 +431,29 @@ function startPreview(idx){
   try {
     shakaPlayer = new shaka.Player(video);
     shakaPlayer.configure(SHAKA_CFG);
+    // Error handling: no fatal crash, just show message
     shakaPlayer.addEventListener('error', (event) => {
-      console.error('Shaka error', event.detail);
+      const error = event.detail;
+      console.error('Shaka error', error);
       setStatus('Stream error','error');
       finishLoadBar();
     });
     shakaPlayer.addEventListener('manifestparsed', () => {
       video.play().catch(()=>{});
     });
-    shakaPlayer.load(url).catch((err) => {
+    // Timeout for loading – if manifest load takes too long, abort
+    const loadTimeout = setTimeout(() => {
+      if(shakaPlayer) {
+        shakaPlayer.destroy().catch(()=>{});
+        shakaPlayer = null;
+        setStatus('Load timeout','error');
+        finishLoadBar();
+      }
+    }, 10000);
+    shakaPlayer.load(url).then(() => {
+      clearTimeout(loadTimeout);
+    }).catch((err) => {
+      clearTimeout(loadTimeout);
       console.error('Shaka load error', err);
       setStatus('Load error','error');
       finishLoadBar();
@@ -412,7 +467,7 @@ function startPreview(idx){
 
 function playSelected(){ cancelPreview(); startPreview(selectedIndex); }
 
-/* Aspect ratio — set default cover on start */
+/* Aspect ratio */
 function cycleAR(){
   video.classList.remove('ar-fill','ar-cover','ar-wide');
   arIdx=(arIdx+1)%AR_MODES.length;
@@ -425,7 +480,7 @@ function cycleAR(){
 arBtn.addEventListener('click',cycleAR);
 function setARFocus(on){ arBtn.classList.toggle('focused',on); }
 
-/* Navigation (unchanged) */
+/* Navigation */
 function moveSel(d){
   if(!filtered.length) return;
   cancelPreview();
@@ -473,7 +528,7 @@ function handleDigit(d){
   },1500);
 }
 
-/* Fullscreen (unchanged) */
+/* Fullscreen */
 function showFsHint(){ clearTimeout(fsHintTimer); fsHint.classList.add('visible'); fsHintTimer=setTimeout(()=>fsHint.classList.remove('visible'),3000); }
 function enterFS(){
   const fn=videoWrap.requestFullscreen||videoWrap.webkitRequestFullscreen||videoWrap.mozRequestFullScreen;
@@ -490,20 +545,32 @@ document.addEventListener('fullscreenchange',()=>{ isFullscreen=!!(document.full
 document.addEventListener('webkitfullscreenchange',()=>{ isFullscreen=!!(document.webkitFullscreenElement||document.fullscreenElement); if(!isFullscreen){ document.body.classList.remove('fullscreen'); fsHint.classList.remove('visible'); } });
 video.addEventListener('dblclick',toggleFS);
 
-/* Video events — also hide splash if still visible on play */
+/* Video events */
 video.addEventListener('playing',()=>{ 
   setStatus('Playing','playing'); 
   finishLoadBar();
-  if(splashScreen && !splashScreen.classList.contains('hide')) {
-    splashScreen.classList.add('hide');
-  }
+  if(splashScreen && !splashScreen.classList.contains('hide')) splashScreen.classList.add('hide');
 });
 video.addEventListener('pause',  ()=>setStatus('Paused','paused'));
 video.addEventListener('waiting',()=>{ setStatus('Buffering…','loading'); startLoadBar(); });
 video.addEventListener('stalled',()=>setStatus('Buffering…','loading'));
 video.addEventListener('error',  ()=>{ setStatus('Error','error'); finishLoadBar(); });
 
-/* Tizen key registration */
+/* ========== Global error catcher (prevents crashes) ========== */
+window.addEventListener('error', (event) => {
+  console.error('[Global error]', event.error);
+  // Optional: show a small toast but don't crash
+  showToast('App error: ' + (event.error?.message || 'unknown'));
+  event.preventDefault(); // prevents default error popup in some environments
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[Unhandled promise rejection]', event.reason);
+  showToast('Promise error: ' + (event.reason?.message || 'unknown'));
+  event.preventDefault();
+});
+
+/* ========== Tizen key registration ========== */
 (function(){
   try{
     if(window.tizen&&tizen.tvinputdevice){
@@ -587,12 +654,12 @@ window.addEventListener('keydown',e=>{
 
   // Set default aspect ratio to COVER
   video.classList.add('ar-cover');
-  arBtn.textContent='⛶ Crop'; // match label
+  arBtn.textContent='⛶ Crop';
   arBtn.classList.add('ar-cover');
 
   loadPlaylist();
 
-  // Optional: auto‑hide splash after 3 seconds if no channel selected
+  // Auto‑hide splash after 3 secs if no channel selected
   setTimeout(()=>{
     if(splashScreen && !hasPlayed && !splashScreen.classList.contains('hide')) {
       splashScreen.classList.add('hide');
