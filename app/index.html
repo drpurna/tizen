@@ -1,98 +1,108 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>IPTV</title>
-  <link rel="stylesheet" href="./style.css"/>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-<div class="app" id="app">
+<div class="app">
 
-  <!-- ── SIDEBAR ─────────────────────────────────────── -->
-  <aside class="sidebar" id="sidebar">
-
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
     <div class="brand">
       <div class="brand-icon">
-        <!-- Professional broadcast/play SVG icon -->
-        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Screen/TV shape -->
-          <rect x="2" y="5" width="28" height="18" rx="3" fill="white" fill-opacity="0.15" stroke="white" stroke-width="1.5"/>
-          <!-- Play triangle -->
-          <path d="M13 11L21 16L13 21V11Z" fill="white"/>
-          <!-- Signal arc left -->
-          <path d="M7 26 Q16 28 25 26" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-          <!-- Stand -->
-          <line x1="16" y1="23" x2="16" y2="26" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="23 7 16 12 23 17 23 7"/>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
         </svg>
       </div>
       <span class="brand-title">IPTV</span>
     </div>
 
-    <div class="search-wrap" id="searchWrap">
-      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+    <div id="searchWrap" class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      <input id="searchInput" type="text" placeholder="Search channels…" spellcheck="false" autocomplete="off"/>
+      <input id="searchInput" type="text" placeholder="Search channels…" autocomplete="off" spellcheck="false"/>
     </div>
 
-    <div class="tab-bar" id="tabBar">
-      <button class="tab active" data-idx="0">Telugu</button>
-      <button class="tab"        data-idx="1">India</button>
-      <button class="tab fav-tab" data-idx="2">★ Favourites</button>
+    <div id="tabBar" class="tab-bar">
+      <button class="tab active">Telugu</button>
+      <button class="tab">India</button>
+      <button class="tab fav-tab">★ Favs</button>
+      <button class="tab jio-tab">JioTV</button>
     </div>
 
     <div class="list-head">
-      <span class="lbl">CHANNELS</span>
+      <span class="lbl">Channels</span>
       <span id="countBadge">0</span>
     </div>
 
     <ul id="channelList"></ul>
 
-    <!-- Number dial overlay -->
-    <div class="ch-dialer" id="chDialer">
-      <span id="chDialerNum"></span>
+    <div id="chDialer" class="ch-dialer">
+      <div id="chDialerNum">0</div>
     </div>
 
     <div class="hint-bar">
-      <span class="hint-item"><span class="dot red"></span>Playlist</span>
-      <span class="hint-item"><span class="dot green"></span>★ Fav</span>
-      <span class="hint-item"><span class="dot yellow"></span>Search</span>
-      <span class="hint-item"><span class="dot blue"></span>Fullscreen</span>
+      <div class="hint-item"><span class="dot red"></span>Tab</div>
+      <div class="hint-item"><span class="dot green"></span>Fav</div>
+      <div class="hint-item"><span class="dot yellow"></span>Search</div>
+      <div class="hint-item"><span class="dot blue"></span>Fullscreen</div>
     </div>
-
   </aside>
 
-  <!-- ── PLAYER ──────────────────────────────────────── -->
-  <main class="player-area" id="playerArea">
-
+  <!-- ── Player ── -->
+  <main class="player-area">
     <div class="player-header">
       <div class="np-info">
-        <div class="np-ch-num" id="npChNum"></div>
+        <div id="npChNum" class="np-ch-num">CH —</div>
         <h2 id="nowPlaying">Select a channel</h2>
       </div>
       <div class="player-controls">
-        <!-- Aspect ratio picker -->
-        <button class="ar-btn" id="arBtn" title="Aspect Ratio">⛶ Fit</button>
-        <span id="statusBadge" class="status-badge idle">IDLE</span>
+        <button id="arBtn" class="ar-btn">⛶ Fit</button>
+        <span id="statusBadge" class="status-badge idle">Idle</span>
       </div>
-    </div>
-
-    <div class="video-wrap" id="videoWrap">
-      <video id="video" autoplay playsinline webkit-playsinline></video>
-      <div class="video-overlay" id="videoOverlay">
-        <div class="overlay-icon">▶</div>
-        <p class="overlay-hint">Select a channel to play<br><span>ENTER · fullscreen</span></p>
-      </div>
-      <div class="fs-hint" id="fsHint">BACK or ← to exit fullscreen</div>
     </div>
 
     <div class="load-bar" id="loadBar"></div>
 
+    <div id="videoWrap" class="video-wrap">
+      <video id="video" playsinline></video>
+      <div id="videoOverlay" class="video-overlay">
+        <div class="overlay-icon">▶</div>
+        <div class="overlay-hint">
+          Press <strong>Enter</strong> to play<br/>
+          <span>↑ ↓ navigate · → aspect ratio</span>
+        </div>
+      </div>
+      <div id="fsHint" class="fs-hint">Press Enter or Back to exit fullscreen</div>
+    </div>
   </main>
 </div>
 
-<script src="./shaka.js"></script>
-<script src="./app.js"></script>
+<!-- ── Jio TV Login Modal ── -->
+<div id="jioModal" class="jio-modal">
+  <div class="jio-modal-content">
+    <h3>JioTV Login</h3>
+    <div id="jioLoginStep1">
+      <input id="jioMobile" type="tel" maxlength="10" placeholder="10-digit Jio number"/>
+      <button id="jioRequestOtp">Send OTP</button>
+    </div>
+    <div id="jioLoginStep2" style="display:none">
+      <input id="jioOtp" type="number" maxlength="6" placeholder="Enter OTP"/>
+      <button id="jioVerifyOtp">Verify &amp; Login</button>
+    </div>
+    <div id="jioStatus"></div>
+    <button id="jioCloseModal" style="background:#333;margin-top:8px;">Close</button>
+  </div>
+</div>
+
+<script src="hls.min.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
