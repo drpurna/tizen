@@ -1,5 +1,5 @@
 // ================================================================
-// IPTV — app.js v8.2  |  Click play, auto‑wide for 576p, bigger font
+// IPTV — app.js v8.3  |  Fixed fullscreen error
 // ================================================================
 
 (function checkShaka(){
@@ -556,22 +556,54 @@ function handleDigit(d){
   },1500);
 }
 
-/* Fullscreen */
+/* Fullscreen (improved) */
 function showFsHint(){ clearTimeout(fsHintTimer); fsHint.classList.add('visible'); fsHintTimer=setTimeout(()=>fsHint.classList.remove('visible'),3000); }
+
 function enterFS(){
+  // Only request fullscreen if the video is ready (has src and not in error state)
+  if (!video.src || video.readyState === 0) {
+    showToast('Wait for playback to start');
+    return;
+  }
   const fn=videoWrap.requestFullscreen||videoWrap.webkitRequestFullscreen||videoWrap.mozRequestFullScreen;
-  if(fn){ try{ fn.call(videoWrap); }catch(e){} }
-  document.body.classList.add('fullscreen'); isFullscreen=true; showFsHint();
+  if(fn){ 
+    try{ 
+      fn.call(videoWrap).catch(e => console.warn('fullscreen request failed', e));
+    }catch(e){ console.warn('fullscreen request error', e); }
+  }
+  // The fullscreenchange event will add class and set isFullscreen
 }
 function exitFS(){
   const fn=document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen;
   if(fn){ try{ fn.call(document); }catch(e){} }
-  document.body.classList.remove('fullscreen'); isFullscreen=false; fsHint.classList.remove('visible');
+  // The fullscreenchange event will remove class and set isFullscreen
 }
 function toggleFS(){ isFullscreen?exitFS():enterFS(); }
-document.addEventListener('fullscreenchange',()=>{ isFullscreen=!!(document.fullscreenElement||document.webkitFullscreenElement); if(!isFullscreen){ document.body.classList.remove('fullscreen'); fsHint.classList.remove('visible'); } });
-document.addEventListener('webkitfullscreenchange',()=>{ isFullscreen=!!(document.webkitFullscreenElement||document.fullscreenElement); if(!isFullscreen){ document.body.classList.remove('fullscreen'); fsHint.classList.remove('visible'); } });
-video.addEventListener('dblclick',toggleFS);
+
+// Listen for fullscreen changes (browser event)
+document.addEventListener('fullscreenchange', () => {
+  isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if (isFullscreen) {
+    document.body.classList.add('fullscreen');
+    showFsHint();
+  } else {
+    document.body.classList.remove('fullscreen');
+    fsHint.classList.remove('visible');
+  }
+});
+// Also handle webkit prefix
+document.addEventListener('webkitfullscreenchange', () => {
+  isFullscreen = !!(document.webkitFullscreenElement || document.fullscreenElement);
+  if (isFullscreen) {
+    document.body.classList.add('fullscreen');
+    showFsHint();
+  } else {
+    document.body.classList.remove('fullscreen');
+    fsHint.classList.remove('visible');
+  }
+});
+
+video.addEventListener('dblclick', toggleFS);
 
 /* Video events */
 video.addEventListener('playing',()=>{ 
@@ -649,7 +681,20 @@ window.addEventListener('keydown',e=>{
     if(isFullscreen){ exitFS(); e.preventDefault(); return; }
     if(focusArea==='list'){
       playSelected();
-      setTimeout(()=>{ if(hasPlayed) enterFS(); },600);
+      // Wait for video to start playing before entering fullscreen
+      const onPlay = () => {
+        video.removeEventListener('playing', onPlay);
+        enterFS();
+      };
+      if (video.readyState >= 3 || !video.paused) {
+        enterFS();
+      } else {
+        video.addEventListener('playing', onPlay);
+        // Fallback: if after 3 seconds still not playing, don't enter fullscreen
+        setTimeout(() => {
+          video.removeEventListener('playing', onPlay);
+        }, 3000);
+      }
     }
     e.preventDefault(); return;
   }
@@ -679,7 +724,6 @@ window.addEventListener('keydown',e=>{
   VS.init(channelListEl);
 
   // default aspect ratio: Fit
-  video.classList.add('ar-fill');   // actually Fit = no class, but we set no class? Wait, Fit uses no class. We'll remove any.
   video.classList.remove('ar-fill', 'ar-cover', 'ar-wide');
   arBtn.textContent='⛶ Fit';
   arBtn.classList.remove('ar-fill', 'ar-cover', 'ar-wide');
