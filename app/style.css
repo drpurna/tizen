@@ -111,7 +111,7 @@ html,body {
 .tab.active { background:#fff; color:#000; border-color:#fff; }
 .tab.fav-tab {
   border-color:#3a3000; color:#7a6400;
-  font-size:14px;                     /* reduced font size */
+  font-size:12px;                     /* reduced font size */
 }
 .tab.fav-tab:hover  { border-color:#665800; color:var(--gold); }
 .tab.fav-tab.active { background:var(--gold); color:#000; border-color:var(--gold); }
