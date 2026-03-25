@@ -8,6 +8,7 @@
 //  • Fast scroll kills any pending preview — no crash, no stale load
 //  • Remote number dial jumps channel without auto-play (just highlights)
 //  • Press ENTER on dialled number to play
+//  • Favourites tab font size adjusted, red glow removed, aspect ratio reset on new channel
 // ================================================================
 
 (function checkHLS(){
@@ -357,6 +358,17 @@ function onLoaded(text){
 }
 
 /* ================================================================
+   ASPECT RATIO RESET FUNCTION
+   ================================================================ */
+function resetAspectRatio() {
+  video.classList.remove('ar-fill', 'ar-cover', 'ar-wide');
+  arIdx = 0;
+  const m = AR_MODES[0];
+  arBtn.textContent = '⛶ ' + m.label;
+  arBtn.className = 'ar-btn' + (m.cls ? ' ' + m.cls : '');
+}
+
+/* ================================================================
    PREVIEW SYSTEM
    – schedulePreview() is called on every navigation move
    – Waits PREVIEW_DELAY ms before starting the stream
@@ -388,6 +400,7 @@ function schedulePreview(){
 }
 
 function startPreview(idx){
+  resetAspectRatio(); // ← reset aspect ratio to default (Fit) before loading new channel
   if(!filtered.length) return;
   const ch=filtered[idx]; if(!ch) return;
 
