@@ -1,59 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns       = "http://www.w3.org/ns/widgets"
-        xmlns:tizen = "http://tizen.org/ns/widgets"
-        id          = "http://iptv.pro/IPTVPro"
-        version     = "1.4.0"
-        viewmodes   = "fullscreen">
+<!--
+  IPTV Pro — config.xml v3.1 | Samsung Tizen OS9
+  v3.1 fixes:
+  • connect-src includes wss:// for future WebSocket support
+  • media-src includes blob: (required for Shaka MSE pipeline on Tizen)
+  • Explicit script-src unsafe-inline (Tizen WRT requirement)
+  • img-src allows data: and https: for channel logos
+-->
+<widget xmlns="http://www.w3.org/ns/widgets"
+        xmlns:tizen="http://tizen.org/ns/widgets"
+        id="http://yourdomain.com/IPTVPro"
+        version="11.5"
+        viewmodes="maximized">
 
-  <tizen:application id        = "IPTVPro.App"
-                     package   = "IPTVPro"
-                     required_version = "7.0"
-                     ambient_support  = "false"/>
-
-  <tizen:setting screen-orientation = "landscape"
-                 context-menu       = "disable"
-                 background-support = "enable"
-                 encryption         = "disable"
-                 install-location   = "auto"
-                 hwkey-event        = "enable"
-                 preload            = "true"
-                 prelaunch-mode     = "enable"/>
-
-  <tizen:metadata key="http://samsung.com/tv/metadata/prelaunch.support" value="true"/>
+  <tizen:application id="IPTV.Pro" package="IPTVPro" required_version="6.0"/>
 
   <content src="index.html"/>
-  <name>IPTV Pro</name>
+
   <icon src="icon.png"/>
-  <description>IPTV Player with JioTV — Tizen OS9</description>
 
-  <access origin="*" subdomains="true"/>
-
-  <tizen:content-security-policy>
-    default-src 'self';
-    script-src  'self' 'unsafe-inline' 'unsafe-eval';
-    style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
-    font-src    'self' https://fonts.gstatic.com;
-    img-src     'self' data: https: http:;
-    media-src   'self' blob: https: http:;
-    connect-src 'self'
-                https://houser-af7j.onrender.com
-                https://iptv-org.github.io
-                https://cdn.jsdelivr.net
-                https://tv.media.jio.com
-                https://jiotvapi.media.jio.com
-                https://jiotv.data.cdn.jio.com
-                https://auth.media.jio.com
-                blob:;
-  </tizen:content-security-policy>
+  <name>IPTV Pro</name>
 
   <tizen:privilege name="http://tizen.org/privilege/internet"/>
-  <tizen:privilege name="http://tizen.org/privilege/network.get"/>
   <tizen:privilege name="http://tizen.org/privilege/filesystem.read"/>
   <tizen:privilege name="http://tizen.org/privilege/filesystem.write"/>
   <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
-  <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
-  <tizen:privilege name="http://tizen.org/privilege/websetting"/>
-  <tizen:privilege name="http://tizen.org/privilege/tv.display"/>
-  <tizen:privilege name="http://tizen.org/privilege/tv.prelaunch"/>
+  <tizen:privilege name="http://tizen.org/privilege/application.info"/>
+
+  <!-- Allow all navigable origins -->
+  <access origin="*" subdomains="true"/>
+
+  <!--
+    CSP v3.1
+    • connect-src: proxy (http+wss), iptv-org M3U sources, jsdelivr CDN mirror
+    • media-src: proxy + blob: (Shaka MSE) + https fallback
+    • img-src: logos from any https + data URIs
+    • script-src: self + unsafe-inline (Tizen WRT requires this for inline scripts)
+  -->
+  <tizen:content-security-policy>
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval'
+      https://cdnjs.cloudflare.com
+      https://cdn.jsdelivr.net;
+    style-src 'self' 'unsafe-inline';
+    connect-src 'self'
+      https://houser-af7j.onrender.com
+      wss://houser-af7j.onrender.com
+      https://iptv-org.github.io
+      https://raw.githubusercontent.com
+      https://cdn.jsdelivr.net;
+    media-src 'self'
+      https://houser-af7j.onrender.com
+      blob:
+      https:;
+    img-src 'self'
+      data:
+      https:;
+    font-src 'self' data:;
+    frame-src 'none';
+    object-src 'none';
+  </tizen:content-security-policy>
+
+  <tizen:setting screen-orientation="landscape"
+                 context-menu="disable"
+                 background-support="enable"
+                 encryption="disable"
+                 install-location="auto"
+                 hwkey-event="enable"/>
 
 </widget>
