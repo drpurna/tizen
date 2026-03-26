@@ -3,146 +3,163 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>IPTV</title>
+  <title>IPTV Pro</title>
+
+  <!--
+    CSP: allow Jio APIs, Akamai CDN, iptv-org playlists, Google Fonts
+    blob: and data: needed for Shaka media source extensions
+  -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;
+                 media-src * blob: data:;
+                 connect-src *;
+                 font-src * data:;"/>
+
+  <!-- Google Font — Bebas Neue for brand title -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet"/>
+
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
+
 <div class="app">
 
-  <!-- ── Sidebar ────────────────────────────────────────── -->
-  <aside class="sidebar">
+  <!-- ══════════════════════════════════════════════════════
+       SIDEBAR
+  ══════════════════════════════════════════════════════════ -->
+  <div class="sidebar">
+
+    <!-- Brand -->
     <div class="brand">
       <div class="brand-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-             stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2"/>
-          <path d="M8 21h8M12 17v4"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="23 7 16 12 23 17 23 7"/>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
         </svg>
       </div>
-      <div class="brand-title">IPTV</div>
+      <span class="brand-title">IPTV</span>
     </div>
 
+    <!-- Search -->
     <div class="search-wrap" id="searchWrap">
-      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      <input id="searchInput" type="text" placeholder="Search channels&#8230;"
-             autocomplete="off" spellcheck="false"/>
+      <input id="searchInput" type="search"
+             placeholder="Search channels…"
+             autocomplete="off" autocorrect="off" spellcheck="false"/>
     </div>
 
+    <!-- Tabs -->
     <div class="tab-bar" id="tabBar">
       <button class="tab active">Telugu</button>
       <button class="tab">India</button>
-      <button class="tab fav-tab">&#9733; Favs</button>
-      <button class="tab">Jio TV</button>
+      <button class="tab fav-tab">★ Favs</button>
+      <button class="tab jio-tab">JioTV</button>
     </div>
 
+    <!-- List header -->
     <div class="list-head">
       <span class="lbl">Channels</span>
       <span id="countBadge">0</span>
     </div>
 
+    <!-- Virtual-scroll channel list -->
     <ul id="channelList"></ul>
 
+    <!-- Number dialer overlay -->
     <div class="ch-dialer" id="chDialer">
-      <div id="chDialerNum">0</div>
+      <div id="chDialerNum">—</div>
     </div>
 
+    <!-- Remote control hints -->
     <div class="hint-bar">
-      <div class="hint-item"><span class="dot red"></span>Switch Tab</div>
-      <div class="hint-item"><span class="dot green"></span>Favourite</div>
-      <div class="hint-item"><span class="dot yellow"></span>Search</div>
-      <div class="hint-item"><span class="dot blue"></span>Fullscreen</div>
+      <div class="hint-item"><div class="dot red"></div><span>Tab</span></div>
+      <div class="hint-item"><div class="dot green"></div><span>Fav</span></div>
+      <div class="hint-item"><div class="dot yellow"></div><span>Search</span></div>
+      <div class="hint-item"><div class="dot blue"></div><span>FS</span></div>
     </div>
-  </aside>
 
-  <!-- ── Player area ────────────────────────────────────── -->
-  <main class="player-area">
+  </div><!-- /sidebar -->
+
+  <!-- ══════════════════════════════════════════════════════
+       PLAYER AREA
+  ══════════════════════════════════════════════════════════ -->
+  <div class="player-area">
+
     <div class="player-header">
       <div class="np-info">
         <div class="np-ch-num" id="npChNum"></div>
         <h2 id="nowPlaying">Select a channel</h2>
       </div>
       <div class="player-controls">
-        <button class="ar-btn" id="arBtn">&#9974; Fit</button>
-        <div class="status-badge idle" id="statusBadge">Ready</div>
+        <button class="ar-btn" id="arBtn">⛶ Fit</button>
+        <span class="status-badge idle" id="statusBadge">IDLE</span>
       </div>
     </div>
 
+    <!-- Buffering progress bar -->
     <div class="load-bar" id="loadBar"></div>
 
+    <!-- Video container -->
     <div class="video-wrap" id="videoWrap">
-      <video id="video" playsinline></video>
+      <video id="video" playsinline autoplay></video>
+
+      <!-- Idle overlay -->
       <div class="video-overlay" id="videoOverlay">
-        <div class="overlay-icon">&#9654;</div>
+        <div class="overlay-icon">▶</div>
         <div class="overlay-hint">
-          Press <strong>Enter</strong> to play<br/>
-          <span>&#8592; &#8593; &#8594; &#8595; navigate &nbsp;|&nbsp; &#8594; aspect ratio</span>
+          Press <strong>Enter / OK</strong> to play<br/>
+          <span>↑↓ browse &nbsp;·&nbsp; RED = tab &nbsp;·&nbsp; BLUE = fullscreen &nbsp;·&nbsp; 0–9 = dial channel</span>
         </div>
       </div>
-      <div class="fs-hint" id="fsHint">Press BACK or &#8592; to exit fullscreen</div>
-    </div>
-  </main>
-</div>
 
-<!-- ================================================================
-     Jio TV Login Modal
-================================================================ -->
+      <!-- Fullscreen exit hint -->
+      <div class="fs-hint" id="fsHint">Press BACK or ENTER to exit fullscreen</div>
+    </div>
+
+  </div><!-- /player-area -->
+
+</div><!-- /app -->
+
+<!-- ══════════════════════════════════════════════════════
+     JIO TV LOGIN MODAL
+══════════════════════════════════════════════════════════ -->
 <div class="jio-modal" id="jioModal">
   <div class="jio-modal-content">
 
-    <h3>&#128246; Jio TV Login</h3>
-    <p style="font-size:13px;color:#777;margin-bottom:20px;line-height:1.6">
-      Login with your Jio mobile number.<br/>
-      An OTP will be sent to your registered number.
-    </p>
+    <h3>JioTV Login</h3>
 
-    <!-- Step 1: Mobile number -->
+    <!-- Step 1: mobile number -->
     <div id="jioLoginStep1">
-      <label style="font-size:12px;color:#666;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:8px">
-        Mobile Number
-      </label>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
-        <span style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:0 12px;height:44px;display:flex;align-items:center;font-size:15px;color:#888;flex-shrink:0">+91</span>
-        <input id="jioMobile" type="tel" maxlength="10"
-               placeholder="10-digit number"
-               inputmode="numeric" pattern="[0-9]*"
-               style="flex:1"/>
-      </div>
-      <button id="jioRequestOtp" style="margin-top:10px">Send OTP</button>
+      <input id="jioMobile" type="tel" inputmode="numeric"
+             maxlength="10" placeholder="10-digit mobile number"/>
+      <button id="jioRequestOtp">Send OTP</button>
     </div>
 
     <!-- Step 2: OTP entry -->
     <div id="jioLoginStep2" style="display:none">
-      <label style="font-size:12px;color:#666;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:8px">
-        Enter OTP
-      </label>
-      <input id="jioOtp" type="tel" maxlength="6"
-             placeholder="6-digit OTP"
-             inputmode="numeric" pattern="[0-9]*"
-             style="letter-spacing:8px;font-size:22px;text-align:center"/>
-      <button id="jioVerifyOtp" style="margin-top:10px">Verify &amp; Login</button>
-      <button id="jioResendOtp"
-              style="background:transparent;color:#666;border:1px solid #2a2a2a;
-                     margin-top:8px;font-size:13px;letter-spacing:0">
-        &#8592; Change Number / Resend OTP
-      </button>
+      <input id="jioOtp" type="tel" inputmode="numeric"
+             maxlength="6" placeholder="Enter 6-digit OTP"/>
+      <button id="jioVerifyOtp">Verify &amp; Login</button>
     </div>
 
-    <!-- Status message -->
-    <div id="jioStatus" style="min-height:28px;margin:14px 0 6px;font-size:14px"></div>
-
-    <!-- Cancel -->
-    <button id="jioCloseModal"
-            style="background:#1a1a1a;color:#555;border:1px solid #2a2a2a;margin-top:2px;font-size:13px">
-      Cancel
-    </button>
+    <div id="jioStatus"></div>
+    <button id="jioCloseModal">Cancel</button>
 
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════
+     SCRIPTS — Shaka bundled locally, no CDN dependency
+══════════════════════════════════════════════════════════ -->
 <script src="shaka.js"></script>
 <script src="app.js"></script>
+
 </body>
 </html>
