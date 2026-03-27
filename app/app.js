@@ -535,15 +535,15 @@ function enterFS() {
   document.body.classList.add('fullscreen');
   isFullscreen = true;
 
-  // Store current AR mode before forcing cover
+  // Store current AR mode before forcing fill
   preFullscreenArMode = arIdx;
-  // Switch to cover mode (index 2) if not already in a cropping mode
-  if (arIdx !== 2) {
+  // Switch to fill mode (index 1) if not already
+  if (arIdx !== 1) {
     video.classList.remove('ar-fill', 'ar-cover', 'ar-wide');
-    video.classList.add('ar-cover');
-    arIdx = 2;
-    arBtn.textContent = '⛶ ' + AR_MODES[2].label;
-    arBtn.className = 'ar-btn ar-cover';
+    video.classList.add('ar-fill');
+    arIdx = 1;
+    arBtn.textContent = '⛶ ' + AR_MODES[1].label;
+    arBtn.className = 'ar-btn ar-fill';
   }
   showFsHint();
 }
