@@ -1,9 +1,8 @@
 // ================================================================
 // IPTV Pro — app.js v13.0 | Samsung Tizen OS9 TV
-// JIO removed. All playlist fetches proxied.
+// JIO removed. All playlist fetches direct (no proxy).
 // ================================================================
 
-const PROXY = 'https://houser-af7j.onrender.com';
 const FAV_KEY = 'iptv:favs';
 const PLAYLIST_KEY = 'iptv:lastPl';
 const PREVIEW_DELAY = 700;
@@ -11,6 +10,7 @@ const PREVIEW_DELAY = 700;
 const PLAYLISTS = [
   { name: 'Telugu', url: 'https://iptv-org.github.io/iptv/languages/tel.m3u' },
   { name: 'India',  url: 'https://iptv-org.github.io/iptv/countries/in.m3u'  },
+  { name: 'DISTRO', url: 'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/in_distro.m3u' },
 ];
 const FAV_IDX = 2;
 
@@ -135,7 +135,11 @@ function finishLoadBar() {
 // ── M3U helpers ─────────────────────────────────────────────────
 function cleanName(raw) {
   return String(raw || '')
-    .replace(/\s*[\\\[([^\\\])]*[\])]/g, '')
+    // Remove anything inside parentheses (including the parentheses)
+    .replace(/\s*\([^)]*\)/g, '')
+    // Also strip brackets
+    .replace(/\s*\[[^\]]*\]/g, '')
+    // Remove common tags like 4K, UHD, etc.
     .replace(/\b(4K|UHD|FHD|HLS|HEVC|H264|H\.264|SD|HD|576[piP]?|720[piP]?|1080[piP]?|2160[piP]?)\b/gi, '')
     .replace(/[\|\-–—]+\s*$/g, '')
     .replace(/\s{2,}/g, ' ')
@@ -353,7 +357,7 @@ function mirrorUrl(url) {
 }
 
 // ── Playlist loading ─────────────────────────────────────────────
-// Strategy: proxy first → direct fallback → CDN mirror fallback
+// Strategy: direct fetch → CDN mirror fallback (no proxy)
 function loadPlaylist(urlOv) {
   cancelPreview();
 
@@ -362,14 +366,13 @@ function loadPlaylist(urlOv) {
     return;
   }
 
-  const rawUrl       = urlOv || PLAYLISTS[plIdx].url;
-  const proxyUrl     = PROXY + '/playlist?url=' + encodeURIComponent(rawUrl);
-  const cacheKey     = 'plCache:' + rawUrl;
+  const rawUrl = urlOv || PLAYLISTS[plIdx].url;
+  const cacheKey = 'plCache:' + rawUrl;
   const cacheTimeKey = 'plCacheTime:' + rawUrl;
 
   // Serve from cache if < 10 min old
   try {
-    const cached    = lsGet(cacheKey);
+    const cached = lsGet(cacheKey);
     const cacheTime = parseInt(lsGet(cacheTimeKey) || '0', 10);
     if (cached && cached.length > 100 && (Date.now() - cacheTime) < 10 * 60 * 1000) {
       onLoaded(cached, true);
@@ -382,7 +385,12 @@ function loadPlaylist(urlOv) {
 
   function tryDirect(afterFail) {
     xhrFetch(rawUrl, 30000, (err2, text2) => {
-      if (!err2 && text2 && text2.length > 100) { persist(text2); finishLoadBar(); onLoaded(text2, false); return; }
+      if (!err2 && text2 && text2.length > 100) {
+        persist(text2);
+        finishLoadBar();
+        onLoaded(text2, false);
+        return;
+      }
       console.warn('[playlist] direct failed', err2 && err2.message);
 
       const mirror = mirrorUrl(rawUrl);
@@ -390,8 +398,12 @@ function loadPlaylist(urlOv) {
         setStatus('Retrying mirror…', 'loading');
         xhrFetch(mirror, 30000, (err3, text3) => {
           finishLoadBar();
-          if (!err3 && text3 && text3.length > 100) { persist(text3); onLoaded(text3, false); }
-          else setStatus('Failed — check network', 'error');
+          if (!err3 && text3 && text3.length > 100) {
+            persist(text3);
+            onLoaded(text3, false);
+          } else {
+            setStatus('Failed — check network', 'error');
+          }
         });
       } else {
         finishLoadBar();
@@ -400,24 +412,20 @@ function loadPlaylist(urlOv) {
     });
   }
 
-  xhrFetch(proxyUrl, 45000, (err, text) => {
-    if (!err && text && text.length > 100) {
-      persist(text); finishLoadBar(); onLoaded(text, false);
-    } else {
-      console.warn('[playlist] proxy failed', err && err.message);
-      setStatus('Retrying…', 'loading');
-      tryDirect();
-    }
-  });
+  // Start with direct fetch
+  tryDirect();
 
   function persist(text) {
-    try { lsSet(cacheKey, text); lsSet(cacheTimeKey, String(Date.now())); } catch (e) {}
+    try {
+      lsSet(cacheKey, text);
+      lsSet(cacheTimeKey, String(Date.now()));
+    } catch (e) {}
   }
 
   function onLoaded(text, fromCache) {
-    channels    = parseM3U(text);
+    channels = parseM3U(text);
     allChannels = channels.slice();
-    filtered    = channels.slice();
+    filtered = channels.slice();
     selectedIndex = 0;
     renderList();
     lsSet(PLAYLIST_KEY, String(plIdx));
@@ -684,15 +692,6 @@ document.addEventListener('tizenhwkey', e => {
   }
 });
 
-// ── Proxy keep-alive ─────────────────────────────────────────────
-async function wakeProxy() {
-  const ctrl = new AbortController();
-  const tid  = setTimeout(() => ctrl.abort(), 55000);
-  try   { await fetch(PROXY + '/ping', { signal: ctrl.signal }); }
-  catch (e) { console.warn('[proxy warm-up failed]', e.message); }
-  finally   { clearTimeout(tid); }
-}
-
 // ── Boot ─────────────────────────────────────────────────────────
 (async function init() {
   registerKeys();
@@ -707,9 +706,6 @@ async function wakeProxy() {
   VS.init(channelListEl);
   await initShaka();
 
-  // Wake proxy, then load playlist regardless of ping result
-  wakeProxy().finally(() => loadPlaylist());
-
-  // Periodic proxy keep-alive (every 8 min)
-  setInterval(() => { fetch(PROXY + '/ping').catch(() => {}); }, 8 * 60 * 1000);
+  // Load playlist directly
+  loadPlaylist();
 })();
