@@ -1,6 +1,8 @@
 // ================================================================
-// IPTV Pro — app.js v12.1 | Samsung Tizen OS9 TV
-// Fixed playlist loading, removed red glow, improved error handling
+// IPTV Pro — app.js v12.3 | Samsung Tizen OS9 TV
+// - Playlist loading with multiple CORS proxies & manual reload
+// - Jio login modal with remote control navigation
+// - Fixed red glow removal (already in CSS)
 // ================================================================
 
 const PROXY = 'https://houser-af7j.onrender.com';
@@ -20,6 +22,13 @@ const PLAYLISTS = [
 ];
 const FAV_IDX = 2;
 const JIO_IDX = 3;
+
+// List of CORS proxies to try (order matters)
+const CORS_PROXIES = [
+  PROXY + '/fetch?url=',
+  'https://api.allorigins.win/raw?url=',
+  'https://cors-anywhere.herokuapp.com/',
+];
 
 const AR_MODES = [
   { cls: '', label: 'Native' },
@@ -560,8 +569,30 @@ function mirrorUrl(url) {
   }
 }
 
-// FIXED: loadPlaylist with proxy fallback and better error handling
-function loadPlaylist(urlOv) {
+// ================== ENHANCED PLAYLIST LOADING ==================
+async function fetchPlaylistWithProxy(url, retryCount = 0) {
+  for (let i = 0; i < CORS_PROXIES.length; i++) {
+    const proxyUrl = CORS_PROXIES[i] + encodeURIComponent(url);
+    try {
+      console.log(`[IPTV] Trying proxy ${i+1}/${CORS_PROXIES.length}: ${proxyUrl}`);
+      const response = await fetch(proxyUrl, { timeout: 15000 });
+      if (response.ok) {
+        const text = await response.text();
+        if (text && text.trim().startsWith('#EXTM3U')) {
+          console.log(`[IPTV] Success with proxy ${i+1}`);
+          return text;
+        } else {
+          console.warn(`[IPTV] Proxy ${i+1} returned non-M3U data`);
+        }
+      }
+    } catch (e) {
+      console.warn(`[IPTV] Proxy ${i+1} failed:`, e.message);
+    }
+  }
+  throw new Error('All proxies failed');
+}
+
+function loadPlaylist(urlOv, forceRefresh = false) {
   cancelPreview();
 
   if (plIdx === FAV_IDX && !urlOv) {
@@ -573,41 +604,37 @@ function loadPlaylist(urlOv) {
   const cacheKey = 'plCache:' + url;
   const cacheTimeKey = 'plCacheTime:' + url;
 
-  try {
-    const cached = lsGet(cacheKey);
-    const cacheTime = parseInt(lsGet(cacheTimeKey) || '0', 10);
-    if (cached && (Date.now() - cacheTime) < 10 * 60 * 1000) {
-      onLoaded(cached, true);
-      return;
-    }
-  } catch (e) {}
+  if (!forceRefresh) {
+    try {
+      const cached = lsGet(cacheKey);
+      const cacheTime = parseInt(lsGet(cacheTimeKey) || '0', 10);
+      if (cached && (Date.now() - cacheTime) < 10 * 60 * 1000) {
+        onLoaded(cached, true);
+        return;
+      }
+    } catch (e) {}
+  }
 
-  setStatus('Loading…', 'loading');
+  setStatus('Loading playlist…', 'loading');
   startLoadBar();
 
-  xhrFetch(url, 25000, (err, text) => {
-    if (err) {
-      console.warn('[IPTV] Direct fetch failed for', url, err);
-      // Try the proxy as fallback (allows CORS and might succeed)
-      const proxyUrl = PROXY + '/fetch?url=' + encodeURIComponent(url);
-      xhrFetch(proxyUrl, 25000, (e2, t2) => {
-        finishLoadBar();
-        if (e2) {
-          console.error('[IPTV] Proxy fetch also failed', e2);
-          setStatus('Failed to load playlist', 'error');
-          showToast('Playlist could not be loaded. Check network.');
-        } else {
-          onLoaded(t2, false);
-        }
-      });
-      return;
-    }
-
-    lsSet(cacheKey, text);
-    lsSet(cacheTimeKey, String(Date.now()));
-    finishLoadBar();
-    onLoaded(text, false);
-  });
+  fetchPlaylistWithProxy(url)
+    .then(text => {
+      lsSet(cacheKey, text);
+      lsSet(cacheTimeKey, String(Date.now()));
+      finishLoadBar();
+      onLoaded(text, false);
+    })
+    .catch(err => {
+      console.error('[IPTV] All playlist fetch attempts failed', err);
+      finishLoadBar();
+      setStatus('Playlist load failed', 'error');
+      showToast('Could not load playlist. Check network or try again with RED button.');
+      if (channels.length === 0) {
+        filtered = [];
+        renderList();
+      }
+    });
 
   function onLoaded(text, fromCache) {
     channels = parseM3U(text);
@@ -632,6 +659,78 @@ function loadPlaylist(urlOv) {
   }
 }
 
+function reloadCurrentPlaylist() {
+  if (plIdx === FAV_IDX) {
+    showFavourites();
+  } else if (plIdx === JIO_IDX) {
+    handleJioTab(true);
+  } else {
+    loadPlaylist(null, true);
+  }
+  showToast('Reloading…');
+}
+
+// ================== JIO MODAL WITH REMOTE NAVIGATION ==================
+let modalFocusableElements = [];
+let currentModalFocusIndex = -1;
+
+function getFocusableElements(container) {
+  return Array.from(container.querySelectorAll('input, button'));
+}
+
+function updateModalFocusable() {
+  const modal = document.getElementById('jioModal');
+  if (!modal || modal.style.display !== 'flex') return;
+  const step1 = document.getElementById('jioLoginStep1');
+  const step2 = document.getElementById('jioLoginStep2');
+  const visibleContainer = step1.style.display !== 'none' ? step1 : step2;
+  modalFocusableElements = getFocusableElements(visibleContainer);
+  if (modalFocusableElements.length === 0) return;
+  const active = document.activeElement;
+  const index = modalFocusableElements.findIndex(el => el === active);
+  currentModalFocusIndex = index >= 0 ? index : 0;
+  modalFocusableElements[currentModalFocusIndex].focus();
+}
+
+function focusModalElement(delta) {
+  if (modalFocusableElements.length === 0) return;
+  currentModalFocusIndex = (currentModalFocusIndex + delta + modalFocusableElements.length) % modalFocusableElements.length;
+  modalFocusableElements[currentModalFocusIndex].focus();
+}
+
+// Override enterModal to set up focus management
+const originalEnterModal = enterModal;
+enterModal = function() {
+  originalEnterModal();
+  setTimeout(() => {
+    updateModalFocusable();
+  }, 50);
+};
+
+const originalExitModal = exitModal;
+exitModal = function() {
+  originalExitModal();
+  modalFocusableElements = [];
+  currentModalFocusIndex = -1;
+};
+
+function bindModalEvents() {
+  const reqBtn = document.getElementById('jioRequestOtp');
+  const verifyBtn = document.getElementById('jioVerifyOtp');
+  const step1 = document.getElementById('jioLoginStep1');
+  const step2 = document.getElementById('jioLoginStep2');
+  if (!reqBtn || !verifyBtn) return;
+
+  const observer = new MutationObserver(() => {
+    if (step1.style.display === 'none' && step2.style.display === 'block') {
+      updateModalFocusable();
+    }
+  });
+  observer.observe(step1, { attributes: true, attributeFilter: ['style'] });
+  observer.observe(step2, { attributes: true, attributeFilter: ['style'] });
+}
+
+// ================== ORIGINAL MODAL FUNCTIONS (unchanged except navigation hooks) ==================
 async function initShaka() {
   shaka.polyfill.installAll();
 
@@ -851,7 +950,6 @@ function setFocus(a) {
   }
 }
 
-// FIXED: switchTab ensures playlist is loaded and handles Jio fallback
 function switchTab(idx) {
   plIdx = idx;
   document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === idx));
@@ -918,18 +1016,56 @@ window.addEventListener('keydown', e => {
   const c = e.keyCode;
 
   if (focusArea === 'modal') {
+    const modal = document.getElementById('jioModal');
+    if (!modal || modal.style.display === 'none') {
+      setFocus('list');
+      return;
+    }
+
+    // Back/Escape closes modal
     if (k === 'Escape' || k === 'Back' || k === 'GoBack' || c === 10009 || c === 27) {
-      const modal = document.getElementById('jioModal');
-      if (modal && modal.style.display !== 'none') {
-        modal.style.display = 'none';
-        exitModal();
-        if (plIdx === JIO_IDX && !jioChannels.length) switchTab(0);
+      modal.style.display = 'none';
+      exitModal();
+      if (plIdx === JIO_IDX && !jioChannels.length) switchTab(0);
+      e.preventDefault();
+      return;
+    }
+
+    // Arrow up/down: navigate between focusable elements
+    if (k === 'ArrowUp' || c === 38) {
+      focusModalElement(-1);
+      e.preventDefault();
+      return;
+    }
+    if (k === 'ArrowDown' || c === 40) {
+      focusModalElement(1);
+      e.preventDefault();
+      return;
+    }
+
+    // Enter/OK: click the focused button or submit input
+    if (k === 'Enter' || c === 13) {
+      const focused = document.activeElement;
+      if (focused && (focused.tagName === 'BUTTON' || (focused.tagName === 'INPUT' && focused.type === 'button'))) {
+        focused.click();
+      } else if (focused && focused.tagName === 'INPUT' && focused.type !== 'button') {
+        // If input is focused, trigger the primary button in the visible step
+        const step1 = document.getElementById('jioLoginStep1');
+        const step2 = document.getElementById('jioLoginStep2');
+        const visibleContainer = step1.style.display !== 'none' ? step1 : step2;
+        const buttons = getFocusableElements(visibleContainer).filter(el => el.tagName === 'BUTTON');
+        if (buttons.length) buttons[0].click();
       }
       e.preventDefault();
+      return;
     }
+
+    // For other keys, don't let them propagate to the rest of the app
+    e.preventDefault();
     return;
   }
 
+  // ---- Normal key handling (outside modal) ----
   if ((c >= 48 && c <= 57) || (c >= 96 && c <= 105)) {
     if (focusArea !== 'search') {
       handleDigit(String(c >= 96 ? c - 96 : c - 48));
@@ -1101,8 +1237,9 @@ window.addEventListener('keydown', e => {
     return;
   }
 
+  // RED BUTTON: reload current playlist
   if (k === 'ColorF0Red' || c === 403) {
-    switchTab((plIdx + 1) % (PLAYLISTS.length + 2));
+    reloadCurrentPlaylist();
     e.preventDefault();
     return;
   }
@@ -1416,9 +1553,8 @@ function showJioLoginModal() {
   }
 }
 
-// FIXED: handleJioTab now falls back to first playlist if not logged in
-async function handleJioTab() {
-  if (jioChannels.length) {
+async function handleJioTab(forceRefresh = false) {
+  if (!forceRefresh && jioChannels.length) {
     channels = jioChannels.slice();
     filtered = channels.slice();
     selectedIndex = 0;
@@ -1437,13 +1573,11 @@ async function handleJioTab() {
         await loadJioChannels();
         return;
       }
-
       jioToken = t;
       if (await jioRefreshToken()) {
         await loadJioChannels();
         return;
       }
-
       lsRemove(JIO_TOKEN_KEY);
     } catch (e) {}
   }
@@ -1451,10 +1585,8 @@ async function handleJioTab() {
   FS.read(FS_TOKEN_FILE, async diskToken => {
     if (diskToken && diskToken.ssoToken) {
       jioToken = diskToken;
-
       if (jioToken.expires > Date.now()) {
         lsSet(JIO_TOKEN_KEY, JSON.stringify(jioToken));
-
         FS.read(FS_CH_FILE, async diskCh => {
           if (diskCh?.channels?.length && (Date.now() - diskCh.time) < JIO_CH_TTL) {
             jioChannels = diskCh.channels;
@@ -1471,8 +1603,7 @@ async function handleJioTab() {
         return;
       }
     }
-
-    // No valid Jio session – fall back to first playlist (Telugu)
+    // No valid Jio session – fall back to first playlist
     console.log('[IPTV] Jio not logged in, switching to first playlist');
     switchTab(0);
   });
@@ -1488,8 +1619,10 @@ document.addEventListener('tizenhwkey', e => {
   if (e.keyName === 'back') flushCriticalStorage();
 });
 
+// ================== INITIALIZATION ==================
 (async function init() {
   registerKeys();
+  bindModalEvents();
 
   try {
     const s = lsGet(PLAYLIST_KEY);
