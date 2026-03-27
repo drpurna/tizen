@@ -1,6 +1,6 @@
 // ================================================================
 // IPTV Pro — app.js v13.0 | Samsung Tizen OS9 TV
-// JIO removed. All playlist fetches direct (no proxy).
+// All playlist fetches direct (no proxy). Jio removed.
 // ================================================================
 
 const FAV_KEY = 'iptv:favs';
@@ -357,7 +357,7 @@ function mirrorUrl(url) {
 }
 
 // ── Playlist loading ─────────────────────────────────────────────
-// Strategy: direct fetch → CDN mirror fallback (no proxy)
+// Strategy: direct fetch → CDN mirror fallback
 function loadPlaylist(urlOv) {
   cancelPreview();
 
@@ -383,36 +383,36 @@ function loadPlaylist(urlOv) {
   setStatus('Loading…', 'loading');
   startLoadBar();
 
-  function tryDirect(afterFail) {
-    xhrFetch(rawUrl, 30000, (err2, text2) => {
-      if (!err2 && text2 && text2.length > 100) {
-        persist(text2);
+  function tryDirect() {
+    xhrFetch(rawUrl, 30000, (err, text) => {
+      if (!err && text && text.length > 100) {
+        persist(text);
         finishLoadBar();
-        onLoaded(text2, false);
+        onLoaded(text, false);
         return;
       }
-      console.warn('[playlist] direct failed', err2 && err2.message);
-
+      console.warn('[playlist] direct failed', err && err.message);
+      // Try CDN mirror
       const mirror = mirrorUrl(rawUrl);
       if (mirror) {
         setStatus('Retrying mirror…', 'loading');
-        xhrFetch(mirror, 30000, (err3, text3) => {
+        xhrFetch(mirror, 30000, (err2, text2) => {
           finishLoadBar();
-          if (!err3 && text3 && text3.length > 100) {
-            persist(text3);
-            onLoaded(text3, false);
+          if (!err2 && text2 && text2.length > 100) {
+            persist(text2);
+            onLoaded(text2, false);
           } else {
+            console.warn('[playlist] mirror failed', err2 && err2.message);
             setStatus('Failed — check network', 'error');
           }
         });
       } else {
         finishLoadBar();
-        setStatus('Failed — check network', 'error');
+        setStatus('Failed — no mirror available', 'error');
       }
     });
   }
 
-  // Start with direct fetch
   tryDirect();
 
   function persist(text) {
