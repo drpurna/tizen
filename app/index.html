@@ -6,7 +6,7 @@
   <title>IPTV Pro</title>
 
   <!--
-    CSP: allow Jio APIs, Akamai CDN, iptv-org playlists, Google Fonts
+    CSP: allow proxy, iptv-org playlists, CDN mirrors, Google Fonts
     blob: and data: needed for Shaka media source extensions
   -->
   <meta http-equiv="Content-Security-Policy"
@@ -60,7 +60,6 @@
       <button class="tab active">Telugu</button>
       <button class="tab">India</button>
       <button class="tab fav-tab">★ Favs</button>
-      <button class="tab jio-tab">JioTV</button>
     </div>
 
     <!-- List header -->
@@ -126,34 +125,6 @@
   </div><!-- /player-area -->
 
 </div><!-- /app -->
-
-<!-- ══════════════════════════════════════════════════════
-     JIO TV LOGIN MODAL
-══════════════════════════════════════════════════════════ -->
-<div class="jio-modal" id="jioModal">
-  <div class="jio-modal-content">
-
-    <h3>JioTV Login</h3>
-
-    <!-- Step 1: mobile number -->
-    <div id="jioLoginStep1">
-      <input id="jioMobile" type="tel" inputmode="numeric"
-             maxlength="10" placeholder="10-digit mobile number"/>
-      <button id="jioRequestOtp">Send OTP</button>
-    </div>
-
-    <!-- Step 2: OTP entry -->
-    <div id="jioLoginStep2" style="display:none">
-      <input id="jioOtp" type="tel" inputmode="numeric"
-             maxlength="6" placeholder="Enter 6-digit OTP"/>
-      <button id="jioVerifyOtp">Verify &amp; Login</button>
-    </div>
-
-    <div id="jioStatus"></div>
-    <button id="jioCloseModal">Cancel</button>
-
-  </div>
-</div>
 
 <!-- ══════════════════════════════════════════════════════
      SCRIPTS — Shaka bundled locally, no CDN dependency
