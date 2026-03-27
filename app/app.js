@@ -12,7 +12,7 @@ const PLAYLISTS = [
   { name: 'India',  url: 'https://iptv-org.github.io/iptv/countries/in.m3u'  },
   { name: 'DISTRO', url: 'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/in_distro.m3u' },
 ];
-const FAV_IDX = 2;
+const FAV_IDX = 3;  // Favs is the 4th tab
 
 const AR_MODES = [
   { cls: '',          label: 'Native' },
