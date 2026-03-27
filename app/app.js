@@ -1,6 +1,6 @@
 // ================================================================
 // IPTV Pro — app.js v13.0 | Samsung Tizen OS9 TV
-// All playlist fetches direct (no proxy). Jio removed.
+// JIO removed. All playlist fetches direct (no proxy).
 // ================================================================
 
 const FAV_KEY = 'iptv:favs';
@@ -49,6 +49,7 @@ let isFullscreen  = false;
 let hasPlayed     = false;
 let player        = null;
 let arIdx         = 0;
+let preFullscreenArMode = null;   // store AR mode before fullscreen
 let fsHintTimer   = null;
 let loadBarTimer  = null;
 let previewTimer  = null;
@@ -391,7 +392,6 @@ function loadPlaylist(urlOv) {
         return;
       }
       console.warn('[playlist] direct failed', err && err.message);
-      // Try CDN mirror
       const mirror = mirrorUrl(rawUrl);
       if (mirror) {
         setStatus('Retrying mirror…', 'loading');
@@ -401,7 +401,6 @@ function loadPlaylist(urlOv) {
             persist(text2);
             onLoaded(text2, false);
           } else {
-            console.warn('[playlist] mirror failed', err2 && err2.message);
             setStatus('Failed — check network', 'error');
           }
         });
@@ -530,25 +529,83 @@ function showFsHint() {
 
 function enterFS() {
   const fn = videoWrap.requestFullscreen || videoWrap.webkitRequestFullscreen || videoWrap.mozRequestFullScreen;
-  if (fn) { try { fn.call(videoWrap); } catch (e) {} }
-  document.body.classList.add('fullscreen'); isFullscreen = true; showFsHint();
+  if (fn) {
+    try { fn.call(videoWrap); } catch (e) {}
+  }
+  document.body.classList.add('fullscreen');
+  isFullscreen = true;
+
+  // Store current AR mode before forcing cover
+  preFullscreenArMode = arIdx;
+  // Switch to cover mode (index 2) if not already in a cropping mode
+  if (arIdx !== 2) {
+    video.classList.remove('ar-fill', 'ar-cover', 'ar-wide');
+    video.classList.add('ar-cover');
+    arIdx = 2;
+    arBtn.textContent = '⛶ ' + AR_MODES[2].label;
+    arBtn.className = 'ar-btn ar-cover';
+  }
+  showFsHint();
 }
 
 function exitFS() {
   const fn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
-  if (fn) { try { fn.call(document); } catch (e) {} }
-  document.body.classList.remove('fullscreen'); isFullscreen = false; fsHint.classList.remove('visible');
+  if (fn) {
+    try { fn.call(document); } catch (e) {}
+  }
+  document.body.classList.remove('fullscreen');
+  isFullscreen = false;
+  fsHint.classList.remove('visible');
+
+  // Restore previous AR mode if it was stored
+  if (preFullscreenArMode !== null) {
+    const restoreMode = preFullscreenArMode;
+    preFullscreenArMode = null;
+    video.classList.remove('ar-fill', 'ar-cover', 'ar-wide');
+    const m = AR_MODES[restoreMode];
+    if (m.cls) video.classList.add(m.cls);
+    arIdx = restoreMode;
+    arBtn.textContent = '⛶ ' + m.label;
+    arBtn.className = 'ar-btn' + (m.cls ? ' ' + m.cls : '');
+  }
 }
 
 function toggleFS() { isFullscreen ? exitFS() : enterFS(); }
 
 document.addEventListener('fullscreenchange', () => {
   isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
-  if (!isFullscreen) { document.body.classList.remove('fullscreen'); fsHint.classList.remove('visible'); }
+  if (!isFullscreen) {
+    document.body.classList.remove('fullscreen');
+    fsHint.classList.remove('visible');
+    // If fullscreen exited without exitFS (e.g. via ESC), also restore AR mode
+    if (preFullscreenArMode !== null) {
+      const restoreMode = preFullscreenArMode;
+      preFullscreenArMode = null;
+      video.classList.remove('ar-fill', 'ar-cover', 'ar-wide');
+      const m = AR_MODES[restoreMode];
+      if (m.cls) video.classList.add(m.cls);
+      arIdx = restoreMode;
+      arBtn.textContent = '⛶ ' + m.label;
+      arBtn.className = 'ar-btn' + (m.cls ? ' ' + m.cls : '');
+    }
+  }
 });
 document.addEventListener('webkitfullscreenchange', () => {
   isFullscreen = !!(document.webkitFullscreenElement || document.fullscreenElement);
-  if (!isFullscreen) { document.body.classList.remove('fullscreen'); fsHint.classList.remove('visible'); }
+  if (!isFullscreen) {
+    document.body.classList.remove('fullscreen');
+    fsHint.classList.remove('visible');
+    if (preFullscreenArMode !== null) {
+      const restoreMode = preFullscreenArMode;
+      preFullscreenArMode = null;
+      video.classList.remove('ar-fill', 'ar-cover', 'ar-wide');
+      const m = AR_MODES[restoreMode];
+      if (m.cls) video.classList.add(m.cls);
+      arIdx = restoreMode;
+      arBtn.textContent = '⛶ ' + m.label;
+      arBtn.className = 'ar-btn' + (m.cls ? ' ' + m.cls : '');
+    }
+  }
 });
 video.addEventListener('dblclick', toggleFS);
 
@@ -705,6 +762,5 @@ document.addEventListener('tizenhwkey', e => {
   VS.init(channelListEl);
   await initShaka();
 
-  // Load playlist directly
   loadPlaylist();
 })();
