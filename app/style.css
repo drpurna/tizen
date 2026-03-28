@@ -1,6 +1,6 @@
 /* ================================================================
-IPTV Pro — style.css v9.0 | Samsung Tizen OS9 TV
-Modern channel list, overlays, transitions, network indicator
+IPTV Pro — style.css v10.0 | Samsung Tizen OS9 TV
+Dark theme, white accents, persistent overlays, modern design
 ================================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
@@ -10,16 +10,18 @@ Modern channel list, overlays, transitions, network indicator
   --panel: #0a0a0a;
   --panel2: #121212;
   --panel3: #1a1a1a;
-  --border: #222;
+  --border: #2a2a2a;
   --text: #f0f0f0;
   --text-secondary: #aaa;
   --muted: #555;
-  --accent: #e50914;
-  --accent-dark: #b00710;
+  --accent: #ffffff;
+  --accent-dark: #e0e0e0;
+  --accent-bg: rgba(255, 255, 255, 0.1);
+  --accent-border: rgba(255, 255, 255, 0.3);
   --gold: #f0c400;
   --radius: 12px;
   --sidebar-w: 480px;
-  --item-h: 92px;
+  --item-h: 98px;
   --font-brand: 'Bebas Neue','Arial Black',Arial,sans-serif;
   --font-title: 'SamsungSharpSans-Bold','Samsung Sharp Sans','Arial Black',Arial,sans-serif;
   --font-body: 'SamsungOne','Samsung One',Arial,sans-serif;
@@ -76,14 +78,18 @@ html, body {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  background: linear-gradient(135deg, #fff, #ccc);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.brand-icon svg { width: 26px; height: 26px; }
+.brand-icon svg {
+  width: 26px;
+  height: 26px;
+  stroke: #000;
+}
 
 .brand-title {
   font-family: var(--font-brand);
@@ -127,13 +133,13 @@ html, body {
 }
 
 #searchInput:focus {
-  border-color: var(--accent);
+  border-color: #fff;
   background: #1a1a1a;
 }
 
 #searchInput::placeholder { color: var(--muted); }
 
-.search-wrap.active #searchInput { border-color: var(--accent); }
+.search-wrap.active #searchInput { border-color: #fff; }
 
 /* ── Tabs ────────────────────────────────────────────────── */
 .tab-bar {
@@ -169,14 +175,14 @@ html, body {
 }
 
 .tab:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: #fff;
+  color: #fff;
 }
 
 .tab.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  background: #fff;
+  color: #000;
+  border-color: #fff;
 }
 
 .tab.fav-tab.active {
@@ -197,10 +203,10 @@ html, body {
 .lbl {
   font-size: 11px;
   letter-spacing: 2px;
-  color: var(--accent);
+  color: #fff;
   text-transform: uppercase;
   font-weight: 700;
-  background: rgba(229, 9, 20, 0.15);
+  background: rgba(255, 255, 255, 0.15);
   padding: 4px 12px;
   border-radius: 20px;
 }
@@ -215,9 +221,9 @@ html, body {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(229, 9, 20, 0.2);
-  border: 1px solid var(--accent);
-  color: var(--accent);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
   font-size: 20px;
   font-weight: bold;
   cursor: pointer;
@@ -228,16 +234,16 @@ html, body {
 }
 
 .add-playlist-btn:hover {
-  background: var(--accent);
-  color: #fff;
+  background: #fff;
+  color: #000;
   transform: rotate(90deg);
 }
 
 #countBadge {
   font-size: 12px;
   font-weight: 700;
-  color: var(--accent);
-  background: rgba(229, 9, 20, 0.15);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
   border: none;
   border-radius: 20px;
   padding: 4px 10px;
@@ -251,7 +257,7 @@ html, body {
   overflow-x: hidden;
   padding: 4px 12px 12px;
   scrollbar-width: thin;
-  scrollbar-color: var(--accent) var(--panel2);
+  scrollbar-color: #fff var(--panel2);
 }
 
 #channelList::-webkit-scrollbar {
@@ -264,7 +270,7 @@ html, body {
 }
 
 #channelList::-webkit-scrollbar-thumb {
-  background: var(--accent);
+  background: #fff;
   border-radius: 3px;
 }
 
@@ -290,28 +296,37 @@ html, body {
 
 #channelList li:hover {
   background: rgba(40, 40, 40, 0.9);
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
   transform: translateX(4px);
 }
 
 #channelList li.active {
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-  border-color: var(--accent);
-  box-shadow: 0 4px 15px rgba(229, 9, 20, 0.3);
+  background: #fff;
+  border-color: #fff;
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
   transform: translateX(8px);
 }
 
 #channelList li.active .ch-name {
-  color: #fff;
+  color: #000;
 }
 
 #channelList li.active .ch-num {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: rgba(0, 0, 0, 0.1);
+  color: #000;
 }
 
 #channelList li.active .ch-fav {
-  color: #ffd966;
+  color: #b08800;
+}
+
+#channelList li.active .ch-program .program-time {
+  background: rgba(0, 0, 0, 0.1);
+  color: #000;
+}
+
+#channelList li.active .ch-program .program-title {
+  color: #333;
 }
 
 /* Channel logo */
@@ -347,6 +362,10 @@ html, body {
   text-transform: uppercase;
 }
 
+#channelList li.active .ch-logo-fb {
+  color: #000;
+}
+
 /* Channel info container */
 .ch-info {
   flex: 1;
@@ -380,10 +399,10 @@ html, body {
 }
 
 .ch-program .program-time {
-  color: var(--accent);
+  color: #fff;
   font-weight: 600;
   font-size: 11px;
-  background: rgba(229, 9, 20, 0.2);
+  background: rgba(255, 255, 255, 0.2);
   padding: 2px 8px;
   border-radius: 12px;
 }
@@ -468,7 +487,7 @@ html, body {
   left: 50%;
   transform: translate(-50%, 50%);
   background: rgba(0, 0, 0, 0.95);
-  border: 2px solid var(--accent);
+  border: 2px solid #fff;
   border-radius: 28px;
   padding: 24px 48px;
   display: none;
@@ -516,11 +535,11 @@ html, body {
   flex-shrink: 0;
 }
 
-.dot.red    { background: var(--accent); }
+.dot.red    { background: #ff4444; }
 .dot.green  { background: #00b259; }
 .dot.yellow { background: #e5b400; }
-.dot.blue   { background: #0052e5; }
-.dot.info   { background: #888; }
+.dot.blue   { background: #4488ff; }
+.dot.info   { background: #fff; }
 
 /* ── Player area ─────────────────────────────────────────── */
 .player-area {
@@ -549,7 +568,7 @@ html, body {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 2px;
-  color: var(--accent);
+  color: #fff;
   text-transform: uppercase;
   margin-bottom: 4px;
 }
@@ -604,9 +623,9 @@ html, body {
   background: #1e1e1e;
 }
 
-.ar-btn.ar-fill  { border-color: var(--accent); color: var(--accent); }
-.ar-btn.ar-cover { border-color: #00b259; color: #00b259; }
-.ar-btn.ar-wide  { border-color: #e5b400; color: #e5b400; }
+.ar-btn.ar-fill  { border-color: #fff; color: #fff; }
+.ar-btn.ar-cover { border-color: #fff; color: #fff; }
+.ar-btn.ar-wide  { border-color: #fff; color: #fff; }
 
 /* ── Network indicator ───────────────────────────────────── */
 .network-indicator {
@@ -623,9 +642,9 @@ html, body {
 }
 
 .network-indicator.online {
-  color: #00c06a;
-  border-color: #00c06a44;
-  background: #00c06a11;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .network-indicator.slow {
@@ -635,9 +654,9 @@ html, body {
 }
 
 .network-indicator.offline {
-  color: var(--accent);
-  border-color: #e5000e44;
-  background: #e5000e11;
+  color: #ff4444;
+  border-color: #ff444444;
+  background: #ff444411;
 }
 
 /* ── Status badge ────────────────────────────────────────── */
@@ -655,9 +674,9 @@ html, body {
 
 .status-badge.idle    { color: var(--muted); border-color: #2a2a2a; }
 .status-badge.loading { color: #e5b400; border-color: #e5b40044; background: #e5b40011; }
-.status-badge.playing { color: #00c06a; border-color: #00c06a44; background: #00c06a11; }
+.status-badge.playing { color: #fff; border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); }
 .status-badge.paused  { color: #777; border-color: #2a2a2a; }
-.status-badge.error   { color: var(--accent); border-color: #e5000e44; background: #e5000e11; }
+.status-badge.error   { color: #ff4444; border-color: #ff444444; background: #ff444411; }
 
 /* ── Video ───────────────────────────────────────────────── */
 .video-wrap {
@@ -681,7 +700,7 @@ video.ar-fill  { object-fit: fill; }
 video.ar-cover { object-fit: cover; }
 video.ar-wide  { object-fit: contain; transform: scaleX(1.34); }
 
-/* ── Video overlays ───────────────────────────────────────── */
+/* ── Video overlays (always visible in fullscreen) ───────── */
 .video-overlay {
   position: absolute;
   inset: 0;
@@ -694,6 +713,7 @@ video.ar-wide  { object-fit: contain; transform: scaleX(1.34); }
   opacity: 1;
   transition: opacity 0.25s ease;
   background: rgba(0, 0, 0, 0.72);
+  z-index: 10;
 }
 
 .video-overlay.hidden {
@@ -718,13 +738,13 @@ video.ar-wide  { object-fit: contain; transform: scaleX(1.34); }
   color: #777;
 }
 
-/* Top and bottom overlays */
+/* Top and bottom overlays - always visible in fullscreen */
 .overlay-top, .overlay-bottom {
   position: absolute;
   left: 0;
   right: 0;
   pointer-events: none;
-  z-index: 10;
+  z-index: 20;
   padding: 20px;
   color: white;
   font-family: var(--font-body);
@@ -781,7 +801,7 @@ video.ar-wide  { object-fit: contain; transform: scaleX(1.34); }
 
 .program-info {
   background: rgba(0, 0, 0, 0.6);
-  border-left: 4px solid var(--accent);
+  border-left: 4px solid #fff;
   padding: 12px 16px;
   border-radius: 8px;
   max-width: 70%;
@@ -814,7 +834,7 @@ video.ar-wide  { object-fit: contain; transform: scaleX(1.34); }
 .progress-bar {
   width: 0%;
   height: 100%;
-  background: var(--accent);
+  background: #fff;
   border-radius: 2px;
   transition: width 0.3s;
 }
@@ -826,6 +846,27 @@ video.ar-wide  { object-fit: contain; transform: scaleX(1.34); }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ── Fullscreen mode (overlays stay visible) ────────────── */
+body.fullscreen .sidebar { display: none; }
+body.fullscreen .app { grid-template-columns: 1fr; }
+body.fullscreen .player-area { padding: 0; gap: 0; }
+body.fullscreen .player-header { display: none; }
+body.fullscreen .load-bar { display: none; }
+body.fullscreen .video-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  border-radius: 0;
+  border: none;
+}
+body.fullscreen .fs-hint { z-index: 10001; }
+body.fullscreen .overlay-top,
+body.fullscreen .overlay-bottom {
+  z-index: 10002;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* ── Fullscreen hint ─────────────────────────────────────── */
@@ -843,7 +884,7 @@ video.ar-wide  { object-fit: contain; transform: scaleX(1.34); }
   opacity: 0;
   transition: opacity 0.25s ease;
   white-space: nowrap;
-  z-index: 20;
+  z-index: 100;
 }
 
 .fs-hint.visible { opacity: 1; }
@@ -851,7 +892,7 @@ video.ar-wide  { object-fit: contain; transform: scaleX(1.34); }
 /* ── Load bar ────────────────────────────────────────────── */
 .load-bar {
   height: 2px;
-  background: linear-gradient(90deg, var(--accent), #ff7070);
+  background: linear-gradient(90deg, #fff, #aaa);
   border-radius: 2px;
   width: 0%;
   opacity: 0;
@@ -860,25 +901,6 @@ video.ar-wide  { object-fit: contain; transform: scaleX(1.34); }
 }
 
 .load-bar.active { opacity: 1; }
-
-/* ── Fullscreen mode ─────────────────────────────────────── */
-body.fullscreen .sidebar { display: none; }
-body.fullscreen .app { grid-template-columns: 1fr; }
-body.fullscreen .player-area { padding: 0; gap: 0; }
-body.fullscreen .player-header { display: none; }
-body.fullscreen .load-bar { display: none; }
-body.fullscreen .video-wrap {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  border-radius: 0;
-  border: none;
-}
-body.fullscreen .fs-hint { z-index: 10000; }
-body.fullscreen .overlay-top,
-body.fullscreen .overlay-bottom {
-  z-index: 10001;
-}
 
 /* ── Modal ───────────────────────────────────────────────── */
 .modal {
@@ -926,7 +948,7 @@ body.fullscreen .overlay-bottom {
 }
 
 .modal-content input:focus {
-  border-color: var(--accent);
+  border-color: #fff;
   background: #111;
 }
 
@@ -948,12 +970,12 @@ body.fullscreen .overlay-bottom {
 }
 
 #savePlaylistBtn {
-  background: var(--accent);
-  color: #fff;
+  background: #fff;
+  color: #000;
 }
 
 #savePlaylistBtn:hover {
-  background: var(--accent-dark);
+  background: #e0e0e0;
 }
 
 #cancelPlaylistBtn {
