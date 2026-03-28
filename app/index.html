@@ -21,10 +21,8 @@
 
 <div class="app">
 
-  <!-- SIDEBAR -->
   <div class="sidebar">
 
-    <!-- Brand -->
     <div class="brand">
       <div class="brand-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff"
@@ -36,7 +34,6 @@
       <span class="brand-title">IPTV</span>
     </div>
 
-    <!-- Search -->
     <div class="search-wrap" id="searchWrap">
       <svg class="search-icon" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="2">
@@ -51,7 +48,6 @@
     <!-- Playlist tabs (dynamically generated) -->
     <div class="tab-bar" id="tabBar"></div>
 
-    <!-- List header with add playlist button -->
     <div class="list-head">
       <span class="lbl">CHANNELS</span>
       <div class="list-head-actions">
@@ -60,26 +56,26 @@
       </div>
     </div>
 
-    <!-- Channel list (virtual scroll) -->
     <ul id="channelList"></ul>
 
-    <!-- Channel number dialer -->
     <div class="ch-dialer" id="chDialer">
       <div id="chDialerNum">—</div>
     </div>
 
-    <!-- Remote control hints -->
     <div class="hint-bar">
       <div class="hint-item"><div class="dot red"></div><span>Tab</span></div>
       <div class="hint-item"><div class="dot green"></div><span>Fav</span></div>
       <div class="hint-item"><div class="dot yellow"></div><span>Search</span></div>
       <div class="hint-item"><div class="dot blue"></div><span>FS</span></div>
       <div class="hint-item"><div class="dot info"></div><span>Info</span></div>
+      <!-- Xtream login button -->
+      <div class="hint-item" id="xtreamLoginHint" style="cursor:pointer;">
+        <div class="dot xtream"></div><span>X</span>
+      </div>
     </div>
 
-  </div><!-- /sidebar -->
+  </div>
 
-  <!-- PLAYER AREA -->
   <div class="player-area">
 
     <div class="player-header">
@@ -131,7 +127,6 @@
         </div>
       </div>
 
-      <!-- Idle overlay -->
       <div class="video-overlay" id="videoOverlay">
         <div class="overlay-icon">▶</div>
         <div class="overlay-hint">
@@ -140,13 +135,12 @@
         </div>
       </div>
 
-      <!-- Fullscreen exit hint -->
       <div class="fs-hint" id="fsHint">Press BACK or ENTER to exit fullscreen</div>
     </div>
 
-  </div><!-- /player-area -->
+  </div>
 
-</div><!-- /app -->
+</div>
 
 <!-- Add Playlist Modal -->
 <div id="addPlaylistModal" class="modal">
@@ -160,6 +154,29 @@
     </div>
   </div>
 </div>
+
+<!-- Xtream Login Modal -->
+<div id="xtreamLoginModal" class="modal">
+  <div class="modal-content" style="max-width: 500px;">
+    <h3>Xtream Codes Login</h3>
+    <input type="url" id="xtreamServerUrl" placeholder="Server URL (e.g., http://server:8080)" autocomplete="off" />
+    <input type="text" id="xtreamUsername" placeholder="Username" autocomplete="off" />
+    <input type="password" id="xtreamPassword" placeholder="Password" autocomplete="off" />
+    <div class="modal-buttons">
+      <button id="xtreamLoginBtn">Login</button>
+      <button id="xtreamCancelBtn">Cancel</button>
+    </div>
+    <div id="xtreamLoginStatus" style="margin-top: 12px; font-size: 12px; text-align: center;"></div>
+    <div id="xtreamAccountInfo" style="margin-top: 8px; font-size: 11px; text-align: center; color: #888;"></div>
+  </div>
+</div>
+
+<!-- Xtream modules -->
+<script src="xtream/types.js"></script>
+<script src="xtream/cache.js"></script>
+<script src="xtream/auth.js"></script>
+<script src="xtream/client.js"></script>
+<script src="xtream/index.js"></script>
 
 <script src="shaka.js"></script>
 <script src="app.js"></script>
