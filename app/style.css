@@ -1,6 +1,6 @@
 /* ================================================================
-IPTV Pro — style.css v10.0 | Samsung Tizen OS9 TV
-Dark theme with white accents, persistent overlays, modern design
+IPTV Pro — style.css v11.0 | Samsung Tizen OS9 TV
+Dark theme, white accents, modern design, Xtream tab, no progress bar
 ================================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
@@ -197,6 +197,21 @@ html, body {
   border-color: var(--gold);
 }
 
+/* Xtream tab – blue theme */
+.tab.xtream-tab {
+  border-color: #0066cc;
+  color: #66ccff;
+}
+.tab.xtream-tab:hover {
+  border-color: #3399ff;
+  color: #88ddff;
+}
+.tab.xtream-tab.active {
+  background: #0066cc;
+  color: #fff;
+  border-color: #0066cc;
+}
+
 /* ── List header ─────────────────────────────────────────── */
 .list-head {
   display: flex;
@@ -326,15 +341,6 @@ html, body {
   color: #b08800;
 }
 
-#channelList li.active .ch-program .program-time {
-  background: rgba(0, 0, 0, 0.1);
-  color: #000;
-}
-
-#channelList li.active .ch-program .program-title {
-  color: #333;
-}
-
 /* Channel logo */
 .ch-logo {
   flex-shrink: 0;
@@ -392,33 +398,6 @@ html, body {
   letter-spacing: -0.2px;
 }
 
-/* Program info below channel name */
-.ch-program {
-  font-size: 12px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ch-program .program-time {
-  color: #fff;
-  font-weight: 600;
-  font-size: 11px;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-.ch-program .program-title {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* Channel number badge */
 .ch-num {
   font-family: var(--font-title);
@@ -469,16 +448,6 @@ html, body {
   background: linear-gradient(90deg, #1a1a1a 25%, #252525 50%, #1a1a1a 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite 0.2s;
-}
-
-.sk-text-small {
-  width: 60%;
-  height: 12px;
-  margin-top: 8px;
-  border-radius: 6px;
-  background: linear-gradient(90deg, #1a1a1a 25%, #252525 50%, #1a1a1a 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite 0.4s;
 }
 
 @keyframes shimmer {
@@ -766,7 +735,7 @@ video.ar-wide {
   transform: scaleX(1.34);
 }
 
-/* ── Video overlays (always visible in fullscreen) ───────── */
+/* ── Video overlays ──────────────────────────────────────── */
 .video-overlay {
   position: absolute;
   inset: 0;
@@ -903,19 +872,9 @@ video.ar-wide {
   -webkit-box-orient: vertical;
 }
 
+/* Hide progress bar */
 .progress-container {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-  margin: 10px 0 5px;
-}
-
-.progress-bar {
-  width: 0%;
-  height: 100%;
-  background: #fff;
-  border-radius: 2px;
-  transition: width 0.3s;
+  display: none !important;
 }
 
 .next-program {
