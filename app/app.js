@@ -28,7 +28,7 @@ const AR_MODES = [
 ];
 
 // ── AV Sync ──────────────────────────────────────────────────────
-let avSyncOffset   = 0;       // ms; negative = audio leads; positive = audio lags
+let avSyncOffset   = 0;
 let avSyncLabel    = null;
 const AV_SYNC_STEP = 50;
 const AV_SYNC_MAX  = 500;
@@ -188,6 +188,7 @@ function cleanName(raw) {
     .replace(/\b(4K|UHD|FHD|HLS|HEVC|H264|H\.264|SD|HD|576[piP]?|720[piP]?|1080[piP]?|2160[piP]?)\b/gi, '')
     .replace(/[\|\-–—]+\s*$/g, '')
     .replace(/\s{2,}/g, ' ')
+    .replace(/>/g, '')
     .trim();
 }
 function parseM3U(text) {
@@ -637,7 +638,7 @@ function updateClock() {
   var now = new Date();
   var te = document.getElementById('currentTime');
   var de = document.getElementById('currentDate');
-  var clk = document.getElementById('brandClock');   // changed
+  var clk = document.getElementById('brandClock');
   var timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   var dateStr = now.toLocaleDateString([], { weekday: 'short', day: '2-digit', month: 'short' });
   if (te) te.textContent = timeStr;
