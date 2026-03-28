@@ -1,6 +1,6 @@
 // ================================================================
-// SAGA IPTV — app.js v20.0 | Samsung Tizen OS9 TV
-// Tile-style channel list, persistent clock, remote improvements
+// SAGA IPTV — app.js v21.0 | Samsung Tizen OS9 TV
+// Tile-style channel list, persistent clock, no logo initials
 // ================================================================
 
 const FAV_KEY              = 'iptv:favs';
@@ -214,9 +214,6 @@ function parseM3U(text) {
 }
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function initials(n) {
-  return String(n||'').replace(/[^a-zA-Z0-9]/g,' ').trim().split(/\s+/).slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase()||'?';
 }
 
 // ── Channel tech info ─────────────────────────────────────────────
@@ -464,11 +461,11 @@ var VS = {
     li._i = i; li._on = false;
     li.style.cssText = 'position:absolute;top:' + (i * this.ITEM_H) + 'px;left:0;right:0;height:auto;min-height:' + this.ITEM_H + 'px;';
 
-    var logo = ch.logo
-      ? '<div class="ch-logo"><img src="' + esc(ch.logo) + '" onerror="this.parentNode.innerHTML=\'<div class=\\\"ch-logo ch-logo-fb\\\">' + esc(initials(ch.name)) + '</div>\'"></div>'
-      : '<div class="ch-logo ch-logo-fb">' + esc(initials(ch.name)) + '</div>';
+    // Logo with placeholder SVG (no text initials)
+    var placeholderSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23aaa' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'%3E%3C/rect%3E%3Cpolyline points='16 21 12 17 8 21'%3E%3C/polyline%3E%3C/svg%3E";
+    var logoHtml = '<div class="ch-logo"><img src="' + esc(ch.logo || placeholderSvg) + '" onerror="this.onerror=null;this.src=\'' + placeholderSvg + '\'"></div>';
 
-    li.innerHTML = logo +
+    li.innerHTML = logoHtml +
       '<div class="ch-info"><div class="ch-name">' + esc(ch.name) + '</div>' +
       (ch.group ? '<div class="ch-group">' + esc(ch.group) + '</div>' : '') +
       '</div>' +
