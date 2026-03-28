@@ -1,6 +1,6 @@
 /* ================================================================
-IPTV Pro — style.css v12.0 | Samsung Tizen OS9 TV
-Tile-style channel list, persistent clock, smooth scroll
+IPTV Pro — style.css v13.0 | Samsung Tizen OS9 TV
+Clock in brand bar, enhanced channel list, larger names
 ================================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
@@ -20,8 +20,8 @@ Tile-style channel list, persistent clock, smooth scroll
   --accent-border: rgba(255, 255, 255, 0.3);
   --gold: #f0c400;
   --radius: 12px;
-  --sidebar-w: 480px;
-  --item-h: 130px;           /* increased for tile height */
+  --sidebar-w: 520px;               /* slightly wider for larger text */
+  --item-h: 148px;                  /* taller to accommodate larger font */
   --font-brand: 'Bebas Neue','Arial Black',Arial,sans-serif;
   --font-title: 'SamsungSharpSans-Bold','Samsung Sharp Sans','Arial Black',Arial,sans-serif;
   --font-body: 'SamsungOne','Samsung One',Arial,sans-serif;
@@ -64,11 +64,11 @@ html, body {
   position: relative;
 }
 
-/* ── Brand ───────────────────────────────────────────────── */
+/* ── Brand with clock ────────────────────────────────────── */
 .brand {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
   padding: 0 20px 16px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 16px;
@@ -99,6 +99,21 @@ html, body {
   color: #fff;
   text-transform: uppercase;
   line-height: 1;
+  margin-left: 12px;
+  flex: 1;
+}
+
+.brand-clock {
+  font-family: var(--font-title);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #fff;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px 14px;
+  border-radius: 40px;
+  white-space: nowrap;
 }
 
 /* ── Search ──────────────────────────────────────────────── */
@@ -275,7 +290,7 @@ html, body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 12px;
+  padding: 8px 12px;
   scroll-behavior: smooth;
   scrollbar-width: thin;
 }
@@ -285,10 +300,10 @@ html, body {
   height: var(--item-h);
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
+  gap: 20px;
+  padding: 12px 20px;
   margin-bottom: 12px;
-  border-radius: 24px;
+  border-radius: 28px;
   background: rgba(20, 20, 20, 0.85);
   backdrop-filter: blur(2px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -307,9 +322,9 @@ html, body {
 
 /* Logo */
 .ch-logo {
-  width: 88px;
-  height: 88px;
-  border-radius: 20px;
+  width: 100px;
+  height: 100px;
+  border-radius: 24px;
   background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
   display: flex;
   align-items: center;
@@ -328,10 +343,12 @@ html, body {
 }
 .ch-logo-fb {
   font-family: var(--font-title);
-  font-size: 28px;
+  font-size: 36px;
   font-weight: 800;
   color: #fff;
   text-transform: uppercase;
+  text-align: center;
+  line-height: 1;
 }
 #channelList li.active .ch-logo-fb {
   color: #000;
@@ -343,24 +360,25 @@ html, body {
   min-width: 0;
 }
 
-/* Channel name */
+/* Channel name – significantly larger */
 .ch-name {
   font-family: var(--font-title);
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  letter-spacing: -0.2px;
 }
 #channelList li.active .ch-name {
   color: #000;
 }
 
-/* Channel group */
+/* Channel group (optional) */
 .ch-group {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -369,23 +387,23 @@ html, body {
 
 /* Favourite star */
 .ch-fav {
-  font-size: 20px;
+  font-size: 24px;
   color: var(--gold);
   flex-shrink: 0;
-  width: 32px;
+  width: 36px;
   text-align: center;
 }
 
 /* Channel number badge */
 .ch-num {
   font-family: var(--font-title);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-secondary);
   background: rgba(0, 0, 0, 0.5);
-  padding: 4px 12px;
+  padding: 6px 14px;
   border-radius: 40px;
-  min-width: 58px;
+  min-width: 66px;
   text-align: center;
   flex-shrink: 0;
 }
@@ -527,19 +545,6 @@ html, body {
   gap: 12px;
   flex-shrink: 0;
   margin-left: 16px;
-}
-
-/* Persistent clock */
-.clock-display {
-  font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 500;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 4px 12px;
-  border-radius: 20px;
-  margin-right: auto;   /* pushes other controls to the right */
-  letter-spacing: 0.5px;
 }
 
 /* ── Aspect ratio button ─────────────────────────────────── */
