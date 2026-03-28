@@ -1,6 +1,7 @@
 // ================================================================
-// IPTV Pro — app.js v17.0 | Samsung Tizen OS9 TV
+// IPTV Pro — app.js v18.0 | Samsung Tizen OS9 TV
 // M3U playlists, Xtream tab, AV sync tweaks, auto‑login fallback
+// No fake program info for M3U; progress bar removed.
 // ================================================================
 
 const FAV_KEY = 'iptv:favs';
@@ -57,7 +58,6 @@ const overlayChannelName = document.getElementById('overlayChannelName');
 const overlayChannelTech = document.getElementById('overlayChannelTech');
 const overlayProgramTitle = document.getElementById('overlayProgramTitle');
 const overlayProgramDesc = document.getElementById('overlayProgramDesc');
-const progressBar = document.getElementById('progressBar');
 const nextProgramInfo = document.getElementById('nextProgramInfo');
 
 // ── State ───────────────────────────────────────────────────────
@@ -81,8 +81,6 @@ let toastTm       = null;
 let favSet        = new Set();
 let networkQuality = 'online';
 let connectionMonitor = null;
-let progressInterval = null;
-let currentProgramDuration = 300;
 let overlaysVisible = true;
 
 // ── Xtream specific state ──────────────────────────────────────
@@ -227,58 +225,7 @@ function initials(n) {
     .map(w => w[0] || '').join('').toUpperCase() || '?';
 }
 
-// ── Program info (simulated) ───────────────────────────────────
-function getProgramInfo(channelName) {
-  const programs = [
-    { time: 'Now', title: 'Live Broadcast', desc: 'Currently airing' },
-    { time: '20:00', title: 'Prime Time', desc: 'Evening programming' },
-    { time: '21:30', title: 'Late Night Show', desc: 'Entertainment' },
-    { time: '19:00', title: 'News Hour', desc: 'Latest updates' },
-    { time: '18:00', title: 'Kids Corner', desc: 'Family friendly' },
-    { time: '22:00', title: 'Movie Night', desc: 'Blockbuster films' },
-    { time: '17:00', title: 'Sports Update', desc: 'Live scores' },
-    { time: '16:00', title: 'Music Mix', desc: 'Top hits' }
-  ];
-  const hash = channelName.split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a; }, 0);
-  const index = Math.abs(hash) % programs.length;
-  const program = programs[index];
-  const nextIndex = (index + 1) % programs.length;
-  const nextProgram = programs[nextIndex];
-  return {
-    current: program,
-    next: nextProgram
-  };
-}
-
-function updateOverlayInfo(channelName, channelIndex) {
-  if (overlayChannelName) overlayChannelName.textContent = channelName;
-  if (npChNumEl) npChNumEl.textContent = 'CH ' + (channelIndex + 1);
-  const program = getProgramInfo(channelName);
-  if (overlayProgramTitle) overlayProgramTitle.textContent = program.current.title;
-  if (overlayProgramDesc) overlayProgramDesc.textContent = program.current.desc;
-  if (nextProgramInfo) nextProgramInfo.textContent = `Next: ${program.next.title} at ${program.next.time}`;
-}
-
-function startProgressSimulation(duration = 300) {
-  if (progressInterval) clearInterval(progressInterval);
-  let startTime = Date.now();
-  progressInterval = setInterval(() => {
-    const elapsed = (Date.now() - startTime) / 1000;
-    const percent = Math.min(100, (elapsed / duration) * 100);
-    if (progressBar) progressBar.style.width = `${percent}%`;
-    if (percent >= 100) {
-      startTime = Date.now();
-      const currentChannel = filtered[selectedIndex];
-      if (currentChannel) {
-        const program = getProgramInfo(currentChannel.name);
-        if (overlayProgramTitle) overlayProgramTitle.textContent = program.current.title;
-        if (overlayProgramDesc) overlayProgramDesc.textContent = program.current.desc;
-        if (nextProgramInfo) nextProgramInfo.textContent = `Next: ${program.next.title} at ${program.next.time}`;
-      }
-    }
-  }, 100);
-}
-
+// ── Channel tech info (from player) ─────────────────────────────
 function updateChannelTech() {
   if (!player) return;
   try {
@@ -403,19 +350,11 @@ const VS = {
       ? `<div class="ch-logo"><img src="${esc(ch.logo)}" onerror="this.parentNode.innerHTML='&lt;div class=&quot;ch-logo ch-logo-fb&quot;&gt;${esc(initials(ch.name))}&lt;/div&gt;'"></div>`
       : `<div class="ch-logo ch-logo-fb">${esc(initials(ch.name))}</div>`;
 
-    const program = getProgramInfo(ch.name);
-    const programHtml = `
-      <div class="ch-program">
-        <span class="program-time">${program.current.time}</span>
-        <span class="program-title">${esc(program.current.title)}</span>
-      </div>
-    `;
-
+    // No program info in channel list
     li.innerHTML = `
       ${logo}
       <div class="ch-info">
         <div class="ch-name">${esc(ch.name)}</div>
-        ${programHtml}
       </div>
       ${isFav(ch) ? '<div class="ch-fav">★</div>' : ''}
       <div class="ch-num">${i + 1}</div>
@@ -703,8 +642,8 @@ async function initShaka() {
       bufferBehind: 20,
       stallEnabled: true,
       stallThreshold: 1,
-      autoCorrectDrift: true,          // AV sync improvement
-      gapDetectionThreshold: 0.5,      // helps with sync
+      autoCorrectDrift: true,
+      gapDetectionThreshold: 0.5,
       durationBackoff: 1,
       retryParameters: { maxAttempts: 4, baseDelay: 500, backoffFactor: 2 },
     },
@@ -730,7 +669,6 @@ async function doPlay(url) {
     await player.load(url);
     await video.play().catch(() => {});
     updateChannelTech();
-    startProgressSimulation(currentProgramDuration);
   } catch (err) {
     console.error('[Shaka] load error', err);
     setStatus('Play error', 'error');
@@ -779,7 +717,14 @@ async function startPreview(idx) {
 
   resetAspectRatio();
   nowPlayingEl.textContent = ch.name;
-  updateOverlayInfo(ch.name, idx);
+  // Update overlay with channel name only (no program info for M3U)
+  if (overlayChannelName) overlayChannelName.textContent = ch.name;
+  if (npChNumEl) npChNumEl.textContent = 'CH ' + (idx + 1);
+  if (!xtreamMode) {
+    if (overlayProgramTitle) overlayProgramTitle.textContent = '';
+    if (overlayProgramDesc) overlayProgramDesc.textContent = '';
+    if (nextProgramInfo) nextProgramInfo.textContent = '';
+  }
   videoOverlay.classList.add('hidden');
   hasPlayed = true;
   setStatus('Buffering…', 'loading');
@@ -1244,18 +1189,16 @@ async function updateXtreamEpg() {
         const nextTime = new Date(next.start_timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         nextProgramInfo.textContent = `Next: ${next.title} at ${nextTime}`;
       }
-      if (progressBar && current.start_timestamp && current.end_timestamp) {
-        const now = Date.now() / 1000;
-        const start = current.start_timestamp;
-        const end = current.end_timestamp;
-        const total = end - start;
-        const elapsed = now - start;
-        const percent = Math.min(100, Math.max(0, (elapsed / total) * 100));
-        progressBar.style.width = `${percent}%`;
-      }
+    } else {
+      if (overlayProgramTitle) overlayProgramTitle.textContent = 'No EPG';
+      if (overlayProgramDesc) overlayProgramDesc.textContent = '';
+      if (nextProgramInfo) nextProgramInfo.textContent = '';
     }
   } catch (error) {
     console.warn('[Xtream] EPG fetch failed:', error);
+    if (overlayProgramTitle) overlayProgramTitle.textContent = 'EPG unavailable';
+    if (overlayProgramDesc) overlayProgramDesc.textContent = '';
+    if (nextProgramInfo) nextProgramInfo.textContent = '';
   }
 }
 
